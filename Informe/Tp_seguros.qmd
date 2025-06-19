@@ -6,6 +6,9 @@ library(ggplot2)
 library(lubridate)
 library(moments)
 library(EnvStats)
+library(actuar)
+library(MASS)
+library(ExtDist)
 ```
 
 
@@ -36,6 +39,8 @@ for (i in 1:nrow(datos)) {
   indice[i] <- cer$CER[cer$Fecha == (datos$Fecha[i] + days(45))]
 }
 
+datos$inflacion <- limite/indice
+
 datos$Cuantia_ajust <- datos$Cuantía * limite/indice
 ```
 
@@ -44,6 +49,8 @@ datos$Cuantia_ajust <- datos$Cuantía * limite/indice
 ```{r}
 cuantia_total <- sum(datos$Cuantia_ajust)
 ```
+
+
 ```{r}
 datos |> 
   mutate(mes = factor(month(Fecha))) |> 
@@ -90,9 +97,50 @@ var_siniestros = var(siniestros_datos$siniestros)
 
 
 ```{r}
-mean(c(3023, 3581, 3431))
-var(c(3023, 3581, 3431)) # Necesario para obtener los parametros de la binomial negativa
-siniestros_prop1 <- rnbinom(10000, 140, 0.04) # r = 140 - p = 0.04
+registro = data.frame(
+  anio = c(2021, 2022, 2023),
+  polizas = c(24752, 25348, 25615),
+  siniestros = c(3023, 3581, 3431)
+)
+
+registro <- registro |> 
+  mutate(lambda = siniestros/polizas)
+
+kableExtra::kable(registro,format = "pipe")
+```
+
+```{r}
+n_polizas <- 25615 
+k <- 10000 # 10000 simulaciones
+media_lambda = mean(registro$lambda)
+h <- ((media_lambda)^2)/(media_lambda*1.1 - media_lambda) # Suponiendo que la variancia es un 10% más que la media
+p <- h/(media_lambda + h)
+
+
+siniestros <- numeric(k)
+for (i in 1:k) {
+  
+  # Obtenemos el numero total de siniestros para toda la cartera
+  siniestros[i] <- sum(rnbinom(n = n_polizas, prob = p, size = h))
+  }
+```
+
+```{r}
+densidad_bn <- dnbinom(x = 0:10 ,prob = p, size = h)
+
+ggplot() +
+  aes(x = 0:4, y = densidad_bn[1:5]) +
+  geom_bar(stat = "identity", width = 0.2) + 
+  theme_bw()
+```
+
+
+
+```{r}
+ggplot() +
+  aes(x = siniestros) +
+  geom_histogram(bins = 40) +
+  theme_bw()
 ```
 
 ```{r}
@@ -104,63 +152,39 @@ r <- mom2/(mom1^2)
 sigma_est <- sqrt(log(r))
 mu_est <- log(mom1) - (1/2)*log(r)
 
-media_siniestros_simulados1 <- mean(siniestros_prop1)
-var_siniestros_simulados1 <- var(siniestros_prop1)
+media_siniestros_simulados1 <- mean(siniestros)
+var_siniestros_simulados1 <- var(siniestros)
 
-cuantia_total_simulada <- numeric(length(siniestros_prop1))
-esperanzas_simuladas <- numeric(length(siniestros_prop1))
-variancias_simuladas <- numeric(length(siniestros_prop1))
-coef_asimetria_simuladas <- numeric(length(siniestros_prop1))
+cuantia_total_simulada <- numeric(length(siniestros))
+esperanzas_simuladas <- numeric(length(siniestros))
+variancias_simuladas <- numeric(length(siniestros))
 contador <- 0
 
-for(i in siniestros_prop1){
+for(i in siniestros){
   contador <- contador + 1
   pos <- rlnorm(n = i, meanlog = mu_est, sdlog = sigma_est)
   esperanzas_simuladas[contador] <- mean(pos)
   variancias_simuladas[contador] <- var(pos)
-  coef_asimetria_simuladas[contador] <- skewness(pos)
   cuantia_total_simulada[contador] <- sum(pos)
 }
 
 media_ej1 <- mean(esperanzas_simuladas) # Esperanza del ejercicio
 var_ej1 <- mean(variancias_simuladas) # Variancia del ejercicio
-coef_as_ej1 <- mean(coef_asimetria_simuladas)
 
 media_cuantia_total <- media_ej1 * media_siniestros_simulados1
 ```
-## Propuesta 2
-
-- Distribución de los siniestros: Binomial negativa
-- Distribución de la cuantías: Pareto I
-- Recargos de seguridad: 2% y 5%
 
 ```{r}
-theta = (nrow(datos)*media_datos - min(datos$Cuantia_ajust))/(nrow(datos)*(media_datos - min(datos$Cuantia_ajust)))
-eta = (nrow(datos)*theta-1)*min(datos$Cuantia_ajust)/(nrow(datos)*theta)
-
-cuantia_total_simulada2 <- numeric(length(siniestros_prop1))
-esperanzas_simuladas2 <- numeric(length(siniestros_prop1))
-variancias_simuladas2 <- numeric(length(siniestros_prop1))
-coef_asimetria_simuladas2 <- numeric(length(siniestros_prop1))
-contador <- 0
-
-for(i in siniestros_prop1){
-  contador <- contador + 1
-  pos <- rpareto(n = i, location = eta, shape = theta)
-  esperanzas_simuladas2[contador] <- mean(pos)
-  variancias_simuladas2[contador] <- var(pos)
-  coef_asimetria_simuladas2[contador] <- skewness(pos)
-  cuantia_total_simulada2[contador] <- sum(pos)
-}
-
-media_ej2 <- mean(esperanzas_simuladas2) # Esperanza del ejercicio
-var_ej2 <- mean(variancias_simuladas2) # Variancia del ejercicio
-coef_as_ej2 <- mean(coef_asimetria_simuladas2)
-
-media_cuantia_total2 <- media_ej2 * media_siniestros_simulados1
+datos |> 
+  ggplot() +
+  aes(x = Cuantia_ajust) +
+  geom_histogram(aes(y = after_stat(density)), bins = 80) +
+  stat_function(fun = dlnorm, args = list(meanlog = mu_est, sdlog = sigma_est), 
+                color = "blue", size = 1) +
+  theme_bw()
 ```
 
-## Propuesta 3
+## Propuesta 2
 
 - Distribución de los siniestros: Binomial negativa
 - Distribución de la cuantías: Gamma
@@ -170,26 +194,111 @@ media_cuantia_total2 <- media_ej2 * media_siniestros_simulados1
 alpha = (media_datos^2)/(var_datos)
 beta = var_datos/media_datos
 
-cuantia_total_simulada3 <- numeric(length(siniestros_prop1))
-esperanzas_simuladas3 <- numeric(length(siniestros_prop1))
-variancias_simuladas3 <- numeric(length(siniestros_prop1))
-coef_asimetria_simuladas3 <- numeric(length(siniestros_prop1))
+cuantia_total_simulada2 <- numeric(length(siniestros))
+esperanzas_simuladas2 <- numeric(length(siniestros))
+variancias_simuladas2 <- numeric(length(siniestros))
 contador <- 0
 
-for(i in siniestros_prop1){
+for(i in siniestros){
   contador <- contador + 1
   pos <- rgamma(n = i, shape = alpha, scale = beta)
+  esperanzas_simuladas2[contador] <- mean(pos)
+  variancias_simuladas2[contador] <- var(pos)
+  cuantia_total_simulada2[contador] <- sum(pos)
+}
+
+media_ej2 <- mean(esperanzas_simuladas2) # Esperanza del ejercicio
+var_ej2 <- mean(variancias_simuladas2) # Variancia del ejercicio
+
+media_cuantia_total2 <- media_ej2 * media_siniestros_simulados1
+```
+
+```{r}
+datos |> 
+  ggplot() +
+  aes(x = Cuantia_ajust) +
+  geom_histogram(aes(y = after_stat(density)), bins = 80) +
+  stat_function(fun = dgamma, args = list(shape = alpha, scale = beta), 
+                color = "blue", size = 1) +
+    stat_function(fun = dlnorm, args = list(meanlog = mu_est, sdlog = sigma_est), 
+                color = "green", size = 1) +
+  theme_bw()
+```
+
+## Propuesta 3
+
+- Distribución de los siniestros: Poisson
+- Distribución de la cuantías: Log-Normal
+- Recargos de seguridad: 2% y 5%
+
+```{r}
+n_polizas <- 25615 
+k <- 10000 # 10000 simulaciones
+media_lambda = mean(registro$lambda)
+
+siniestros_poisson <- numeric(k)
+for (i in 1:k) {
+  
+  # Obtenemos el numero total de siniestros para toda la cartera
+  siniestros_poisson[i] <- sum(rpois(n = n_polizas, lambda = media_lambda))
+  }
+```
+
+```{r}
+densidad_poisson <- dpois(x = 0:10 ,lambda = media_lambda)
+
+ggplot() +
+  aes(x = 0:4, y = densidad_poisson[1:5]) +
+  geom_bar(stat = "identity", width = 0.2) + 
+  theme_bw()
+```
+
+```{r}
+ggplot() +
+  aes(x = siniestros_poisson) +
+  geom_histogram(bins = 40) +
+  theme_bw()
+```
+
+
+```{r}
+mom1 <- media_datos
+mom2 <- var_datos + mom1^2
+
+r <- mom2/(mom1^2)
+
+sigma_est <- sqrt(log(r))
+mu_est <- log(mom1) - (1/2)*log(r)
+
+media_siniestros_simulados3 <- mean(siniestros_poisson)
+var_siniestros_simulados3 <- var(siniestros_poisson)
+
+cuantia_total_simulada3 <- numeric(length(siniestros_poisson))
+esperanzas_simuladas3 <- numeric(length(siniestros_poisson))
+variancias_simuladas3 <- numeric(length(siniestros_poisson))
+contador <- 0
+
+for(i in siniestros_poisson){
+  contador <- contador + 1
+  pos <- rlnorm(n = i, meanlog = mu_est, sdlog = sigma_est)
   esperanzas_simuladas3[contador] <- mean(pos)
   variancias_simuladas3[contador] <- var(pos)
-  coef_asimetria_simuladas3[contador] <- skewness(pos)
   cuantia_total_simulada3[contador] <- sum(pos)
 }
 
 media_ej3 <- mean(esperanzas_simuladas3) # Esperanza del ejercicio
 var_ej3 <- mean(variancias_simuladas3) # Variancia del ejercicio
-coef_as_ej3 <- mean(coef_asimetria_simuladas3)
 
-media_cuantia_total3 <- media_ej3 * media_siniestros_simulados1
+media_cuantia_total3 <- media_ej3 * media_siniestros_simulados3
+
+```
+
+
+
+```{r}
+ggplot() +
+  aes(x = cuantia_total_simulada) +
+  geom_density()
 ```
 
 
