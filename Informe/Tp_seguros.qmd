@@ -1,4 +1,4 @@
-```{r}
+```{r, echo =F, warning=F, message=F}
 # Librerias
 library(dplyr)
 library(readxl)
@@ -9,10 +9,10 @@ library(EnvStats)
 library(actuar)
 library(MASS)
 library(ExtDist)
+library(kableExtra)
 ```
 
-
-```{r}
+```{r, echo =F, warning=F, message=F}
 # Carga de los datos
 datos <- read_excel("../Datos/Trabajo Final 2024 Base de Datos .xlsx")
 cer <- read_excel("../Datos/CER.xlsx")
@@ -24,15 +24,14 @@ datos$Fecha[1] + lubridate::days(45)
 cer$Fecha[354] + days(45)
 ```
 
-
-```{r}
+```{r, echo =F, warning=F, message=F}
 limite = cer$CER[cer$Fecha == (datos$Fecha[3431] + days(45))] 
 
 
 cer$CER[cer$Fecha == (datos$Fecha[1:3] + days(45))]
 ```
 
-```{r}
+```{r, echo =F, warning=F, message=F}
 # Ajuste por el indice CER a 45 dias
 indice = numeric(nrow(datos))
 for (i in 1:nrow(datos)) {
@@ -46,19 +45,16 @@ datos$Cuantia_ajust <- datos$Cuantía * limite/indice
 
 ## Analisis descriptivo
 
-```{r}
+```{r, echo =F, warning=F, message=F}
 cuantia_total <- sum(datos$Cuantia_ajust)
-```
 
-
-```{r}
 meses <- c("Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
            "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre")
 datos |> 
   mutate(mes = factor(month(Fecha), levels = 1:12, labels = meses)) |> 
   group_by(mes) |>
   summarise(Cuantia_total = sum(Cuantia_ajust, na.rm = TRUE)) |> 
-  # La linea de arriba ayuda a que podamos poner el bode negro a la barras, si no
+  # La linea de arriba ayuda a que podamos poner el borde negro a la barras, si no
   # las barras quedan como a rayas (No sé explicarme mejor, perdón)
   ggplot() +
   aes(x = mes, y = Cuantia_total / 1e6) + 
@@ -70,7 +66,8 @@ datos |>
   theme(plot.caption = element_text(hjust = 0.5))
 
 ```
-```{r}
+
+```{r, echo =F, warning=F, message=F}
 datos |> 
   mutate(mes = factor(month(Fecha), levels = 1:12, labels = meses)) |>
   group_by(mes) |> 
@@ -82,7 +79,8 @@ datos |>
   theme_bw() +
   labs(y = "Siniestros", x = "Mes")
 ```
-```{r}
+
+```{r, echo =F, warning=F, message=F}
 # Medidas resumenes de las cuantias
 media_datos = mean(datos$Cuantia_ajust) # Promedio
 var_datos = var(datos$Cuantia_ajust) # Desvío estandar
@@ -97,19 +95,26 @@ siniestros_datos <- datos |>
 media_siniestros = mean(siniestros_datos$siniestros)
 var_siniestros = var(siniestros_datos$siniestros)
 
+resumen <- data.frame(
+  x = c("Cuantías", "Siniestros"),
+  y = c(round(media_datos, 2),round(media_siniestros, 2) ),
+  j = c(round(var_datos/1000000, 2), round(var_siniestros, 2))
+)
+
+kable(resumen, col.names = c("", "Media", "Variancia"), 
+                  format = "pipe") %>%
+  kable_styling() %>% 
+  add_footnote("La variancia de las cuantías está experesada en millones", notation = "none")
+
 ```
 
-$$
-
-$$
 ## Propuesta 1
 
-- Distribución de los siniestros: Binomial negativa
-- Distribución de la cuantías: Log-Normal
-- Recargos de seguridad: 2% y 5%
+-   Distribución de los siniestros: Binomial negativa
+-   Distribución de la cuantías: Log-Normal
+-   Recargos de seguridad: 2% y 5%
 
-
-```{r}
+```{r, echo =F, warning=F, message=F}
 registro = data.frame(
   anio = c(2021, 2022, 2023),
   polizas = c(24752, 25348, 25615),
@@ -117,14 +122,15 @@ registro = data.frame(
 )
 
 registro <- registro |> 
-  mutate(lambda = siniestros/polizas)
+  mutate(lambda = round(siniestros/polizas, 4))
 
-kableExtra::kable(registro,format = "pipe")
+kable(registro,format = "pipe",
+                  col.names = c("Año", "Pólizas", "Sineistros", "$\\lambda$"))
 ```
 
 ```{r}
 n_polizas <- 25615 
-k <- 10000 # 10000 simulaciones
+k <- 5000 # 10000 simulaciones
 media_lambda = mean(registro$lambda)
 h <- ((media_lambda)^2)/(media_lambda*1.1 - media_lambda) # Suponiendo que la variancia es un 10% más que la media
 p <- h/(media_lambda + h)
@@ -143,11 +149,10 @@ densidad_bn <- dnbinom(x = 0:10 ,prob = p, size = h)
 
 ggplot() +
   aes(x = 0:4, y = densidad_bn[1:5]) +
-  geom_bar(stat = "identity", width = 0.2) + 
-  theme_bw()
+  geom_bar(stat = "identity", width = 0.2, fill  = "plum2") + 
+  theme_bw()+
+  labs(y = "Densidad", x = "Siniestros por póliza")
 ```
-
-
 
 ```{r}
 ggplot() +
@@ -191,17 +196,18 @@ media_cuantia_total <- media_ej1 * media_siniestros_simulados1
 datos |> 
   ggplot() +
   aes(x = Cuantia_ajust) +
-  geom_histogram(aes(y = after_stat(density)), bins = 80) +
+  geom_histogram(aes(y = after_stat(density)), bins = 80, fill = "grey21") +
   stat_function(fun = dlnorm, args = list(meanlog = mu_est, sdlog = sigma_est), 
-                color = "blue", size = 1) +
-  theme_bw()
+                color = "orangered", size = 1) +
+  theme_bw() +
+  labs(y = "Densidad", x = "Cuantía ajustada")
 ```
 
 ## Propuesta 2
 
-- Distribución de los siniestros: Binomial negativa
-- Distribución de la cuantías: Gamma
-- Recargos de seguridad: 2% y 5%
+-   Distribución de los siniestros: Binomial negativa
+-   Distribución de la cuantías: Gamma
+-   Recargos de seguridad: 2% y 5%
 
 ```{r}
 alpha = (media_datos^2)/(var_datos)
@@ -230,23 +236,24 @@ media_cuantia_total2 <- media_ej2 * media_siniestros_simulados1
 datos |> 
   ggplot() +
   aes(x = Cuantia_ajust) +
-  geom_histogram(aes(y = after_stat(density)), bins = 80) +
+  geom_histogram(aes(y = after_stat(density)), bins = 80, fill = "grey21") +
   stat_function(fun = dgamma, args = list(shape = alpha, scale = beta), 
-                color = "blue", size = 1) +
+                color = "springgreen3", size = 1) +
     stat_function(fun = dlnorm, args = list(meanlog = mu_est, sdlog = sigma_est), 
-                color = "green", size = 1) +
-  theme_bw()
+                color = "orangered", size = 1) +
+  theme_bw() +
+  labs(y = "Densidad", x = "Cuantía ajustada")
 ```
 
 ## Propuesta 3
 
-- Distribución de los siniestros: Poisson
-- Distribución de la cuantías: Log-Normal
-- Recargos de seguridad: 2% y 5%
+-   Distribución de los siniestros: Poisson
+-   Distribución de la cuantías: Log-Normal
+-   Recargos de seguridad: 2% y 5%
 
 ```{r}
 n_polizas <- 25615 
-k <- 10000 # 10000 simulaciones
+k <- 5000 # 10000 simulaciones
 media_lambda = mean(registro$lambda)
 
 siniestros_poisson <- numeric(k)
@@ -262,8 +269,9 @@ densidad_poisson <- dpois(x = 0:10 ,lambda = media_lambda)
 
 ggplot() +
   aes(x = 0:4, y = densidad_poisson[1:5]) +
-  geom_bar(stat = "identity", width = 0.2) + 
-  theme_bw()
+  geom_bar(stat = "identity", width = 0.2, fill  = "plum2") + 
+  theme_bw()+
+  labs(y = "Densidad", x = "Siniestros por póliza")
 ```
 
 ```{r}
@@ -272,7 +280,6 @@ ggplot() +
   geom_histogram(bins = 40) +
   theme_bw()
 ```
-
 
 ```{r}
 mom1 <- media_datos
@@ -306,12 +313,8 @@ media_cuantia_total3 <- media_ej3 * media_siniestros_simulados3
 
 ```
 
-
-
 ```{r}
 ggplot() +
   aes(x = cuantia_total_simulada) +
   geom_density()
 ```
-
-
