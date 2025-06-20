@@ -52,26 +52,35 @@ cuantia_total <- sum(datos$Cuantia_ajust)
 
 
 ```{r}
+meses <- c("Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+           "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre")
 datos |> 
-  mutate(mes = factor(month(Fecha))) |> 
+  mutate(mes = factor(month(Fecha), levels = 1:12, labels = meses)) |> 
+  group_by(mes) |>
+  summarise(Cuantia_total = sum(Cuantia_ajust, na.rm = TRUE)) |> 
+  # La linea de arriba ayuda a que podamos poner el bode negro a la barras, si no
+  # las barras quedan como a rayas (No sé explicarme mejor, perdón)
   ggplot() +
-  aes(x = mes, y = Cuantia_ajust/1000000) +
-  geom_bar(stat = "identity") +
+  aes(x = mes, y = Cuantia_total / 1e6) + 
+  geom_bar(stat = "identity", fill = "darkolivegreen2", color = "black") +
   theme_bw() +
-  labs(y = "Cuantia", 
-       caption = "* los valores estan expresados en millones de pesos (ej:150 son 150 millones)",
-       x = "Mes")
+  labs(y = "Cuantia*", 
+       caption = "*los valores están expresados en millones de pesos",
+       x = "Mes") +
+  theme(plot.caption = element_text(hjust = 0.5))
+
 ```
 ```{r}
 datos |> 
-  mutate(mes = factor(month(Fecha))) |>
+  mutate(mes = factor(month(Fecha), levels = 1:12, labels = meses)) |>
   group_by(mes) |> 
   summarize(siniestros = n(),
             total_cuantia = sum(Cuantia_ajust)) |> 
   ggplot() +
   aes(x = mes, y = siniestros) +
-  geom_bar(stat = "identity") +
-  theme_bw()
+  geom_bar(stat = "identity", fill = "darkolivegreen2", color = "black") +
+  theme_bw() +
+  labs(y = "Siniestros", x = "Mes")
 ```
 ```{r}
 # Medidas resumenes de las cuantias
@@ -87,8 +96,12 @@ siniestros_datos <- datos |>
             total_cuantia = sum(Cuantia_ajust))
 media_siniestros = mean(siniestros_datos$siniestros)
 var_siniestros = var(siniestros_datos$siniestros)
+
 ```
 
+$$
+
+$$
 ## Propuesta 1
 
 - Distribución de los siniestros: Binomial negativa
