@@ -43,7 +43,16 @@ datos$inflacion <- limite/indice
 datos$Cuantia_ajust <- datos$Cuantía * limite/indice
 ```
 
-## Analisis descriptivo
+# Introducción
+
+Una empresa aseguradora resulta solvente cuando dispone o es capaz de recolectar los recursos necesarios para hacer frente a posibles siniestro no previstos. Sea cual sea la duración del seguro, hay una diferencia entre el momento en que se contrata y el momento en el que se cobra y es ahí donde la capacidad de solvencia de la compañia cobra importancia ya que sirve para que los clientes tengan la certeza de que ante la ocurrencia de un siniestro, esta va a ser capaz de cubrirlo.
+
+En este informe, se buscará determinar el Margen de Solvencia Mínimo para una subcartera de pólizas de seguros de automotores de una determinada compañia, de forma tal que su Probabilidad de Solvencia sea del 99% durante el año 2024. Los datos con lo que se cuenta pertenecen al año 2023 entonces, debido al contexto inflacionario del país, para trabajar en el 2024 se realizo un ajuste por inflación a través del indice CER, considerando 45 días de rezago; esto debido a que el dato inflacionario se publica 30 días tarde y el indice CER demora 15 días más.  
+
+
+## Análisis descriptivo
+
+Se realizó un análisis descriptivo de las cuantías ajustadas por inlfación de los siniestros.
 
 ```{r, echo =F, warning=F, message=F}
 cuantia_total <- sum(datos$Cuantia_ajust)
@@ -63,7 +72,8 @@ datos |>
   labs(y = "Cuantia*", 
        caption = "*los valores están expresados en millones de pesos",
        x = "Mes") +
-  theme(plot.caption = element_text(hjust = 0.5))
+  theme(plot.caption = element_text(hjust = 0.5),
+        axis.text.x = element_text(angle = 30, vjust = 0.9))
 
 ```
 
@@ -77,8 +87,12 @@ datos |>
   aes(x = mes, y = siniestros) +
   geom_bar(stat = "identity", fill = "darkolivegreen2", color = "black") +
   theme_bw() +
-  labs(y = "Siniestros", x = "Mes")
+  labs(y = "Siniestros", x = "Mes") +
+  theme(axis.text.x = element_text(angle = 30, vjust = 0.9))
 ```
+
+Se puede observar que el total de Marzo fue el más elevado, tanto para las cunatías como los siniestros; lo que llevaría pensar que se pagaron muchas cuantías por la elevada ocurrencia de siniestros. Por otro lado, Septiembre tuvo un comportamiento inverso: la ocurrencia de siniestros y el total de cuantías a fin de mes fueron menores respecto a los 11 meses restantes.
+
 
 ```{r, echo =F, warning=F, message=F}
 # Medidas resumenes de las cuantias
@@ -108,11 +122,11 @@ kable(resumen, col.names = c("", "Media", "Variancia"),
 
 ```
 
-## Propuesta 1
 
--   Distribución de los siniestros: Binomial negativa
--   Distribución de la cuantías: Log-Normal
--   Recargos de seguridad: 2% y 5%
+# Metodología
+
+Se cuenta con la información de polizas y siniestros de años anteriores, la cual se utiliza para estimar los parametros de las distribuciones que se aplicarán para simular el número de siniestros.
+
 
 ```{r, echo =F, warning=F, message=F}
 registro = data.frame(
@@ -125,12 +139,36 @@ registro <- registro |>
   mutate(lambda = round(siniestros/polizas, 4))
 
 kable(registro,format = "pipe",
-                  col.names = c("Año", "Pólizas", "Sineistros", "$\\lambda$"))
+                  col.names = c("Año", "Pólizas", "Siniestros", "$\\lambda$"))
 ```
+
+
+Para lograr el objetivo propuesto -MSM que garantice una probabilidad de solvencia del 99%-, se simulan primero la cantidad de siniestros que pueden ocurrir en el año siguiendo una distribución de probabilidad; luego, a partir de cada resultado, se simulan las cuantías individuales de cada siniestro para asi obtener las cuantias totales -anuales-. Finalmente, con esta última información se calcula el MSM.
+
+
+## Propuesta 1
+
+-   Distribución de los siniestros: Binomial negativa
+
+| Dado que no se considera adecuado suponer que la media y la variancia de los siniestro son iguales, se propone que la variancia es un 10% más grande que la media para poder estimar los parámetros.
+| La estimación se basa en el método de los momentos:
+$$
+\begin{cases}
+E(N) = \lambda \\
+V(N) = \lambda \; \cdot \; ( 1 + \frac{\lambda}{h})
+\end{cases}
+\Rightarrow
+\begin{cases}
+\hat{\lambda} = 0.1324  \\
+\hat{h} = 1.3243
+\end{cases}
+
+$$
+
 
 ```{r}
 n_polizas <- 25615 
-k <- 5000 # 10000 simulaciones
+k <- 5000 # 5000 simulaciones
 media_lambda = mean(registro$lambda)
 h <- ((media_lambda)^2)/(media_lambda*1.1 - media_lambda) # Suponiendo que la variancia es un 10% más que la media
 p <- h/(media_lambda + h)
@@ -143,6 +181,7 @@ for (i in 1:k) {
   siniestros[i] <- sum(rnbinom(n = n_polizas, prob = p, size = h))
   }
 ```
+
 
 ```{r}
 densidad_bn <- dnbinom(x = 0:10 ,prob = p, size = h)
@@ -160,6 +199,27 @@ ggplot() +
   geom_histogram(bins = 40) +
   theme_bw()
 ```
+
+
+-   Distribución de la cuantías: Log-Normal
+
+Estimamos por los momentos que hace uso de R -poner R-
+
+$$
+R = 1.2629 
+\Rightarrow
+\begin{cases}
+\hat{\mu} = ln(m_1) - \frac{1}{2}ln(R) \\
+\hat{\sigma} = \sqrt{ln(R)}
+\end{cases}
+\Rightarrow
+\begin{cases}
+\hat{\mu} =  13.0465 \\
+\hat{\sigma} = 0.4831
+\end{cases}
+
+$$
+
 
 ```{r}
 mom1 <- media_datos
@@ -207,7 +267,7 @@ datos |>
 
 -   Distribución de los siniestros: Binomial negativa
 -   Distribución de la cuantías: Gamma
--   Recargos de seguridad: 2% y 5%
+-   Recargos de seguridad: 1% y 3%
 
 ```{r}
 alpha = (media_datos^2)/(var_datos)
@@ -239,8 +299,8 @@ datos |>
   geom_histogram(aes(y = after_stat(density)), bins = 80, fill = "grey21") +
   stat_function(fun = dgamma, args = list(shape = alpha, scale = beta), 
                 color = "springgreen3", size = 1) +
-    stat_function(fun = dlnorm, args = list(meanlog = mu_est, sdlog = sigma_est), 
-                color = "orangered", size = 1) +
+    # stat_function(fun = dlnorm, args = list(meanlog = mu_est, sdlog = sigma_est), 
+    #             color = "orangered", size = 1) +
   theme_bw() +
   labs(y = "Densidad", x = "Cuantía ajustada")
 ```
@@ -249,11 +309,11 @@ datos |>
 
 -   Distribución de los siniestros: Poisson
 -   Distribución de la cuantías: Log-Normal
--   Recargos de seguridad: 2% y 5%
+-   Recargos de seguridad: 1% y 3%
 
 ```{r}
 n_polizas <- 25615 
-k <- 5000 # 10000 simulaciones
+k <- 5000 # 5000 simulaciones
 media_lambda = mean(registro$lambda)
 
 siniestros_poisson <- numeric(k)
@@ -310,11 +370,77 @@ media_ej3 <- mean(esperanzas_simuladas3) # Esperanza del ejercicio
 var_ej3 <- mean(variancias_simuladas3) # Variancia del ejercicio
 
 media_cuantia_total3 <- media_ej3 * media_siniestros_simulados3
+```
+
+## Cálculo del MSM
+
+### Propuesta 1: Distribución Binomial Negativa + Distribución Log-Normal
+
+Se cobra la prima recargada que es la media de la siniestral anual 1787 millones de pesos + 1% de recargo
+Se cobra la prima recargada que es la media de la siniestral anual 1787 millones de pesos + 3% de recargo
+
+```{r}
+cuantia_total*1.02
+```
+```{r}
+z = qnorm(0.99)
+y1 = z + (skewness(cuantia_total_simulada)/6)*(z^2 - 1)
+
+prop1 <- data.frame(
+  RS = c("1%", "3%"),
+  PR = c(mean(cuantia_total_simulada)*1.01, mean(cuantia_total_simulada)*1.03),
+  P_N = c(z*sd(cuantia_total_simulada)+mean(cuantia_total_simulada), z*sd(cuantia_total_simulada)+mean(cuantia_total_simulada))
+) |> 
+  mutate(MSM_n = P_N - PR) |> 
+  mutate(P_NP = c(y1*sd(cuantia_total_simulada)+mean(cuantia_total_simulada), y1*sd(cuantia_total_simulada)+mean(cuantia_total_simulada))) |> 
+  mutate(MSM_np = P_NP - PR)
 
 ```
+
 
 ```{r}
 ggplot() +
   aes(x = cuantia_total_simulada) +
+  geom_density()
+```
+```{r}
+z = qnorm(0.99)
+y2 = z + (skewness(cuantia_total_simulada2)/6)*(z^2 - 1)
+
+prop2 <- data.frame(
+  RS = c("1%", "3%"),
+  PR = c(mean(cuantia_total_simulada2)*1.01, mean(cuantia_total_simulada2)*1.03),
+  P_N = c(z*sd(cuantia_total_simulada2)+mean(cuantia_total_simulada2), z*sd(cuantia_total_simulada2)+mean(cuantia_total_simulada2))
+) |> 
+  mutate(MSM_n = P_N - PR) |> 
+  mutate(P_NP = c(y2*sd(cuantia_total_simulada2)+mean(cuantia_total_simulada2), y2*sd(cuantia_total_simulada2)+mean(cuantia_total_simulada2))) |> 
+  mutate(MSM_np = P_NP - PR)
+```
+
+
+```{r}
+ggplot() +
+  aes(x = cuantia_total_simulada2) +
+  geom_density()
+```
+
+```{r}
+z = qnorm(0.99)
+y3 = z + (skewness(cuantia_total_simulada3)/6)*(z^2 - 1)
+
+prop3 <- data.frame(
+  RS = c("1%", "3%"),
+  PR = c(mean(cuantia_total_simulada3)*1.01, mean(cuantia_total_simulada3)*1.03),
+  P_N = c(z*sd(cuantia_total_simulada3)+mean(cuantia_total_simulada3), z*sd(cuantia_total_simulada3)+mean(cuantia_total_simulada3))
+) |> 
+  mutate(MSM_n = P_N - PR) |> 
+  mutate(P_NP = c(y3*sd(cuantia_total_simulada3)+mean(cuantia_total_simulada3), y3*sd(cuantia_total_simulada3)+mean(cuantia_total_simulada3))) |> 
+  mutate(MSM_np = P_NP - PR)
+```
+
+
+```{r}
+ggplot() +
+  aes(x = cuantia_total_simulada3) +
   geom_density()
 ```
