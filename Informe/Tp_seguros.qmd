@@ -19,6 +19,8 @@ cer <- read_excel("../Datos/CER.xlsx")
 
 datos$Fecha <- lubridate::as_date(datos$Fecha)
 cer$Fecha <- lubridate::as_date(cer$Fecha)
+set.seed(1248)
+options(scipen = 999)
 
 datos$Fecha[1] + lubridate::days(45)
 cer$Fecha[354] + days(45)
@@ -143,15 +145,24 @@ kable(registro,format = "pipe",
 ```
 
 
-Para lograr el objetivo propuesto -MSM que garantice una probabilidad de solvencia del 99%-, se simulan primero la cantidad de siniestros que pueden ocurrir en el año siguiendo una distribución de probabilidad; luego, a partir de cada resultado, se simulan las cuantías individuales de cada siniestro para asi obtener las cuantias totales -anuales-. Finalmente, con esta última información se calcula el MSM.
+Para lograr el objetivo propuesto -MSM que garantice una probabilidad de solvencia del 99%-,se simula la cartera de polizas de la sigueinte manera: 
+
+1. Se hacen 5000 simulaciones para la cantidad de siniestros que pueden ocurrir en el año, siguiendo una distribución de probabilidad.
+
+2. A partir de cada resultado, se simulan las cuantías individuales de los siniestros.
+
+3. Se suman las cuantías individuales de cada año simulado, obteniendo así las cuantías totales.
+Con esta última información se calculará el MSM.
+
 
 
 ## Propuesta 1
 
 -   Distribución de los siniestros: Binomial negativa
 
-| Dado que no se considera adecuado suponer que la media y la variancia de los siniestro son iguales, se propone que la variancia es un 10% más grande que la media para poder estimar los parámetros.
+| Dado que no se considera adecuado suponer que la media y la variancia de los siniestro son iguales, se propone que la variancia es un 10% más grande que la media para poder estimar los parámetros. Dado que las cantidades varian maso asi
 | La estimación se basa en el método de los momentos:
+
 $$
 \begin{cases}
 E(N) = \lambda \\
@@ -162,7 +173,6 @@ V(N) = \lambda \; \cdot \; ( 1 + \frac{\lambda}{h})
 \hat{\lambda} = 0.1324  \\
 \hat{h} = 1.3243
 \end{cases}
-
 $$
 
 
@@ -196,14 +206,26 @@ ggplot() +
 ```{r}
 ggplot() +
   aes(x = siniestros) +
-  geom_histogram(bins = 40) +
+  geom_histogram(bins = 40, fill = "gray21") +
+  labs(y = "Frecuencia", x = "Siniestro") +
   theme_bw()
+
 ```
 
 
+$$
+\begin{array} {c|c|c}
+ & \text{Media} & {\begin{array}{c}\text{Desvío} \\ \text{Estándar}\end{array}}  & \text{Mínimo} & \text{Máximo} & \text{Mediana} \\
+\hline
+Siniestros & 3391.48 & 60.85 & 3179 & 3609 & 3391
+\end{array}
+$$
+
 -   Distribución de la cuantías: Log-Normal
 
-Estimamos por los momentos que hace uso de R -poner R-
+| Teniendo en cuenta que los datos de las cuantías individuales son asimétricos, se postula que podrían seguir la distribución planteada.
+
+| Los parámetros de la misma, se estiman a través del método de los momentos; partiendo del valor R, definido como $R = \frac{m_2}{(m_1)^2}$ donde $m_1$ es el momento de orden 1 y $m_2$ es el momento de orden 2.
 
 $$
 R = 1.2629 
@@ -230,29 +252,6 @@ r <- mom2/(mom1^2)
 sigma_est <- sqrt(log(r))
 mu_est <- log(mom1) - (1/2)*log(r)
 
-media_siniestros_simulados1 <- mean(siniestros)
-var_siniestros_simulados1 <- var(siniestros)
-
-cuantia_total_simulada <- numeric(length(siniestros))
-esperanzas_simuladas <- numeric(length(siniestros))
-variancias_simuladas <- numeric(length(siniestros))
-contador <- 0
-
-for(i in siniestros){
-  contador <- contador + 1
-  pos <- rlnorm(n = i, meanlog = mu_est, sdlog = sigma_est)
-  esperanzas_simuladas[contador] <- mean(pos)
-  variancias_simuladas[contador] <- var(pos)
-  cuantia_total_simulada[contador] <- sum(pos)
-}
-
-media_ej1 <- mean(esperanzas_simuladas) # Esperanza del ejercicio
-var_ej1 <- mean(variancias_simuladas) # Variancia del ejercicio
-
-media_cuantia_total <- media_ej1 * media_siniestros_simulados1
-```
-
-```{r}
 datos |> 
   ggplot() +
   aes(x = Cuantia_ajust) +
@@ -263,36 +262,44 @@ datos |>
   labs(y = "Densidad", x = "Cuantía ajustada")
 ```
 
+Se puede ver que la distribución Log-Normal estaría siendo adecuada para las cuantías individuales. 
+
+
+
 ## Propuesta 2
 
 -   Distribución de los siniestros: Binomial negativa
--   Distribución de la cuantías: Gamma
--   Recargos de seguridad: 1% y 3%
+
+| Se plantea el mismo supuesto, respecto a la variancia y la media, que se postuló en la propuesta 1.
+
+-   Distribución de la cuantías: Gamma 
+
+| Considerando que los datos de las cuantías individuales son continuos, positivos y asimétricos, se contempla que la distribución postulada podría ser adecuada para ellos. 
+
+| Los parámetros de la misma se estiman mediante el método de los momentos:
+
+$$
+\begin{cases}
+E(X) = \overline{X} = \alpha \; \cdot \; \beta \\
+V(X) = S^2 = \alpha \; \cdot \; \beta^2
+\end{cases}
+\Rightarrow
+\begin{cases}
+\hat{\alpha} = \frac{(\overline{X})^2}{S^2} \\
+\hat{\beta} = \frac{S^2}{\overline{X}}
+\end{cases}
+\Rightarrow
+\begin{cases}
+\hat{\alpha} = 3.8035 \\
+\hat{\beta} = 136936.7038
+\end{cases}
+$$
+
 
 ```{r}
 alpha = (media_datos^2)/(var_datos)
 beta = var_datos/media_datos
 
-cuantia_total_simulada2 <- numeric(length(siniestros))
-esperanzas_simuladas2 <- numeric(length(siniestros))
-variancias_simuladas2 <- numeric(length(siniestros))
-contador <- 0
-
-for(i in siniestros){
-  contador <- contador + 1
-  pos <- rgamma(n = i, shape = alpha, scale = beta)
-  esperanzas_simuladas2[contador] <- mean(pos)
-  variancias_simuladas2[contador] <- var(pos)
-  cuantia_total_simulada2[contador] <- sum(pos)
-}
-
-media_ej2 <- mean(esperanzas_simuladas2) # Esperanza del ejercicio
-var_ej2 <- mean(variancias_simuladas2) # Variancia del ejercicio
-
-media_cuantia_total2 <- media_ej2 * media_siniestros_simulados1
-```
-
-```{r}
 datos |> 
   ggplot() +
   aes(x = Cuantia_ajust) +
@@ -305,11 +312,20 @@ datos |>
   labs(y = "Densidad", x = "Cuantía ajustada")
 ```
 
+
+Al igual que la Log-Normal, la distribución Gamma parecería que se adecua a los datos de las cuantías totales; con la salvedad de que presenta menor densidad que la Log-Normal en valores chicos de cuantías.
+
+
+
 ## Propuesta 3
 
--   Distribución de los siniestros: Poisson
--   Distribución de la cuantías: Log-Normal
--   Recargos de seguridad: 1% y 3%
+-   Distribución de los siniestros: Poisson 
+
+| Pese a lo planteado en las propuestas anteriores, se propone que el número de siniestro seguiría una distribución Poisson; por lo tanto, se esta suponiendo que la media y la variancia son iguales.
+
+$$
+E(N) = V(N) = \lambda \; \Rightarrow \; \hat{\lambda} = 0.1324
+$$
 
 ```{r}
 n_polizas <- 25615 
@@ -337,9 +353,31 @@ ggplot() +
 ```{r}
 ggplot() +
   aes(x = siniestros_poisson) +
-  geom_histogram(bins = 40) +
+  geom_histogram(bins = 40, fill = "grey21") +
+  labs(y = "Frecuencia", x = "Siniestros") +
   theme_bw()
 ```
+
+$$
+\begin{array} {c|c|c}
+ & \text{Media} & {\begin{array}{c}\text{Desvío} \\ \text{Estándar}\end{array}}  & \text{Mínimo} & \text{Máximo} & \text{Mediana} \\
+\hline
+Siniestros & 3391.44 & 57.94 & 3166 & 3615 & 3392
+\end{array}
+$$
+
+-   Distribución de la cuantías: Log-Normal
+
+| Teniendo en cuenta que los datos de las cuantías individuales son asimétricos, se postula que podrían seguir la distribución planteada.
+
+| Los parámetros de la misma, se estiman a través del método de los momentos; partiendo del valor R, definido como $R = \frac{m_2}{(m_1)^2}$ donde $m_1$ es el momento de orden 1 y $m_2$ es el momento de orden 2. Las estimaciones serán las mismas que las obtenidas para la propuesta 1:
+
+$$
+\begin{cases}
+\hat{\mu} =  13.0465 \\
+\hat{\sigma} = 0.4831
+\end{cases}
+$$
 
 ```{r}
 mom1 <- media_datos
@@ -349,7 +387,151 @@ r <- mom2/(mom1^2)
 
 sigma_est <- sqrt(log(r))
 mu_est <- log(mom1) - (1/2)*log(r)
+```
 
+
+Al ser los mismos parámetros estimados, el ajuste de la distribución Log-Normal será el mismo que para el caso donde el número de siniestros sigue la Binomial Negativa.
+
+
+## Resultados
+
+### Propuesta 1: Distribución Binomial Negativa + Distribución Log-Normal
+
+```{r}
+# Simulación de las cuantías individualea y totales
+media_siniestros_simulados1 <- mean(siniestros)
+var_siniestros_simulados1 <- var(siniestros)
+
+cuantia_total_simulada <- numeric(length(siniestros))
+esperanzas_simuladas <- numeric(length(siniestros))
+variancias_simuladas <- numeric(length(siniestros))
+contador <- 0
+
+for(i in siniestros){
+  contador <- contador + 1
+  pos <- rlnorm(n = i, meanlog = mu_est, sdlog = sigma_est)
+  esperanzas_simuladas[contador] <- mean(pos)
+  variancias_simuladas[contador] <- var(pos)
+  cuantia_total_simulada[contador] <- sum(pos)
+}
+
+media_ej1 <- mean(esperanzas_simuladas) # Esperanza del ejercicio
+var_ej1 <- mean(variancias_simuladas) # Variancia del ejercicio
+
+media_cuantia_total <- media_ej1 * media_siniestros_simulados1
+```
+
+Se cobra la prima recargada que es la media de la siniestral anual 1787 millones de pesos + 1% de recargo
+Se cobra la prima recargada que es la media de la siniestral anual 1787 millones de pesos + 3% de recargo
+
+```{r}
+z = qnorm(0.99)
+y1 = z + (skewness(cuantia_total_simulada)/6)*(z^2 - 1)
+
+prop1 <- data.frame(
+  RS = c("1%", "3%"),
+  #agregar la prima pura,
+  PR = c(mean(cuantia_total_simulada)*1.01, mean(cuantia_total_simulada)*1.03),
+  P_N = c(z*sd(cuantia_total_simulada)+mean(cuantia_total_simulada), z*sd(cuantia_total_simulada)+mean(cuantia_total_simulada))
+) |> 
+  mutate(MSM_n = P_N - PR) |> 
+  mutate(P_NP = c(y1*sd(cuantia_total_simulada)+mean(cuantia_total_simulada), y1*sd(cuantia_total_simulada)+mean(cuantia_total_simulada))) |> 
+  mutate(MSM_np = P_NP - PR)
+
+```
+
+```{r}
+datos_simulados <- data.frame(
+  prop1 = cuantia_total_simulada,
+  prop2 = cuantia_total_simulada2,
+  prop3 = cuantia_total_simulada3
+)
+
+dnp <- function(x, mu, sigma, asim) {
+  y <- ((x-mu)/sigma) + (asim/6)*(((x-mu)/sigma)^2-1)
+  (1/(sqrt(2*pi)*sigma))*exp(-0.5*(((y*sigma+mu)-mu)/sigma)^2)
+}
+```
+
+
+
+
+```{r}
+datos_simulados |> 
+  ggplot() +
+  aes(x = cuantia_total_simulada) +
+  geom_histogram(aes(y = after_stat(density)), bins = 50) +
+  stat_function(fun = dnorm, args = list(mean = mean(cuantia_total_simulada),
+                                         sd = sd(cuantia_total_simulada)), 
+                color = "springgreen3", size = 1)
+
+datos_simulados |> 
+  ggplot() +
+  aes(x = cuantia_total_simulada) +
+  geom_histogram(aes(y = after_stat(density)), bins = 50) +
+    stat_function(fun = dnorm, args = list(mean = mean(cuantia_total_simulada),
+                                         sd = sd(cuantia_total_simulada)), 
+                color = "springgreen3", size = 1) +
+  stat_function(fun = dnp, args = list(mu = mean(cuantia_total_simulada),
+                                       sigma = sd(cuantia_total_simulada),
+                                       asim = skewness(cuantia_total_simulada)), 
+                color = "firebrick2", size = 1)
+```
+
+
+
+### Propuesta 2: Distribución Binomial Negativa + Distribución Gamma
+
+```{r}
+# Simulación de las cuantías individuales y totales
+cuantia_total_simulada2 <- numeric(length(siniestros))
+esperanzas_simuladas2 <- numeric(length(siniestros))
+variancias_simuladas2 <- numeric(length(siniestros))
+contador <- 0
+
+for(i in siniestros){
+  contador <- contador + 1
+  pos <- rgamma(n = i, shape = alpha, scale = beta)
+  esperanzas_simuladas2[contador] <- mean(pos)
+  variancias_simuladas2[contador] <- var(pos)
+  cuantia_total_simulada2[contador] <- sum(pos)
+}
+
+media_ej2 <- mean(esperanzas_simuladas2) # Esperanza del ejercicio
+var_ej2 <- mean(variancias_simuladas2) # Variancia del ejercicio
+
+media_cuantia_total2 <- media_ej2 * media_siniestros_simulados1
+```
+
+
+```{r}
+z = qnorm(0.99)
+y2 = z + (skewness(cuantia_total_simulada2)/6)*(z^2 - 1)
+
+prop2 <- data.frame(
+  RS = c("1%", "3%"),
+  PR = c(mean(cuantia_total_simulada2)*1.01, mean(cuantia_total_simulada2)*1.03),
+  P_N = c(z*sd(cuantia_total_simulada2)+mean(cuantia_total_simulada2), z*sd(cuantia_total_simulada2)+mean(cuantia_total_simulada2))
+) |> 
+  mutate(MSM_n = P_N - PR) |> 
+  mutate(P_NP = c(y2*sd(cuantia_total_simulada2)+mean(cuantia_total_simulada2), y2*sd(cuantia_total_simulada2)+mean(cuantia_total_simulada2))) |> 
+  mutate(MSM_np = P_NP - PR)
+```
+
+
+```{r}
+ggplot() +
+  aes(x = cuantia_total_simulada2) +
+  geom_density()
+```
+
+
+
+### Propuesta 3: Distribución Poisson + Distribución Log-Normal
+
+
+```{r}
+# Simulación de las cuantías individuales y totales
 media_siniestros_simulados3 <- mean(siniestros_poisson)
 var_siniestros_simulados3 <- var(siniestros_poisson)
 
@@ -372,57 +554,6 @@ var_ej3 <- mean(variancias_simuladas3) # Variancia del ejercicio
 media_cuantia_total3 <- media_ej3 * media_siniestros_simulados3
 ```
 
-## Cálculo del MSM
-
-### Propuesta 1: Distribución Binomial Negativa + Distribución Log-Normal
-
-Se cobra la prima recargada que es la media de la siniestral anual 1787 millones de pesos + 1% de recargo
-Se cobra la prima recargada que es la media de la siniestral anual 1787 millones de pesos + 3% de recargo
-
-```{r}
-cuantia_total*1.02
-```
-```{r}
-z = qnorm(0.99)
-y1 = z + (skewness(cuantia_total_simulada)/6)*(z^2 - 1)
-
-prop1 <- data.frame(
-  RS = c("1%", "3%"),
-  PR = c(mean(cuantia_total_simulada)*1.01, mean(cuantia_total_simulada)*1.03),
-  P_N = c(z*sd(cuantia_total_simulada)+mean(cuantia_total_simulada), z*sd(cuantia_total_simulada)+mean(cuantia_total_simulada))
-) |> 
-  mutate(MSM_n = P_N - PR) |> 
-  mutate(P_NP = c(y1*sd(cuantia_total_simulada)+mean(cuantia_total_simulada), y1*sd(cuantia_total_simulada)+mean(cuantia_total_simulada))) |> 
-  mutate(MSM_np = P_NP - PR)
-
-```
-
-
-```{r}
-ggplot() +
-  aes(x = cuantia_total_simulada) +
-  geom_density()
-```
-```{r}
-z = qnorm(0.99)
-y2 = z + (skewness(cuantia_total_simulada2)/6)*(z^2 - 1)
-
-prop2 <- data.frame(
-  RS = c("1%", "3%"),
-  PR = c(mean(cuantia_total_simulada2)*1.01, mean(cuantia_total_simulada2)*1.03),
-  P_N = c(z*sd(cuantia_total_simulada2)+mean(cuantia_total_simulada2), z*sd(cuantia_total_simulada2)+mean(cuantia_total_simulada2))
-) |> 
-  mutate(MSM_n = P_N - PR) |> 
-  mutate(P_NP = c(y2*sd(cuantia_total_simulada2)+mean(cuantia_total_simulada2), y2*sd(cuantia_total_simulada2)+mean(cuantia_total_simulada2))) |> 
-  mutate(MSM_np = P_NP - PR)
-```
-
-
-```{r}
-ggplot() +
-  aes(x = cuantia_total_simulada2) +
-  geom_density()
-```
 
 ```{r}
 z = qnorm(0.99)
