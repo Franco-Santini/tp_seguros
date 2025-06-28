@@ -217,7 +217,7 @@ Para lograr el objetivo propuesto -MSM que garantice una probabilidad de solvenc
 
 2. A partir de cada resultado, se simulan las cuantías individuales de los siniestros.
 
-3. Se suman las cuantías individuales de cada año simulado, obteniendo así las cuantías totales.
+3. Se suman las cuantías individuales de cada año simulado, obteniendo así las cuantías totales simuladas.
 Con esta última información se calculará el MSM.
 
 
@@ -406,7 +406,7 @@ datos |>
 ```
 
 
-Al igual que la Log-Normal, la distribución Gamma parecería que se adecua a los datos de las cuantías totales; con la salvedad de que presenta menor densidad que la Log-Normal en valores chicos de cuantías.
+Al igual que la Log-Normal, la distribución Gamma parecería que se adecua a los datos de las cuantías individuales; con la salvedad de que presenta menor densidad que la Log-Normal en valores chicos de cuantías.
 
 
 
@@ -414,7 +414,7 @@ Al igual que la Log-Normal, la distribución Gamma parecería que se adecua a lo
 
 -   Distribución de los siniestros: Poisson 
 
-Pese a lo planteado en las propuestas anteriores, se propone que el número de siniestro seguiría una distribución Poisson; por lo tanto, se esta suponiendo que la media y la variancia son iguales.
+Pese a lo planteado en las propuestas anteriores, se propone que el número de siniestros seguiría una distribución Poisson; por lo tanto, se esta suponiendo que la media y la variancia son iguales.
 
 $$
 E(N) = V(N) = \lambda \; \Rightarrow \; \hat{\lambda} = 0.1324
@@ -511,6 +511,13 @@ Al ser los mismos parámetros estimados, el ajuste de la distribución Log-Norma
 
 ## Resultados
 
+Como se mencionó antes, con las simulaciones de las cuantías individuales, se simulan las cuantías totales para luego calcular el Margen de Solvencia Mínimo. Este se define de la siguiente manera: $MSM = y_0 - PR$, donde $y_0$ es el valor de la cuantía total perteneciente al cuartil 0.99 y $PR$ es la prima recargada.
+
+Cabe aclarar que la prima recargada es simplemente la prima pura (PP), la media de la siniestralidad anual, más un porcentaje de esa prima: $PR = PP + \alpha \cdot PP$. En el presente trabajo los recargos que se le agregan a la prima pura serán del 1% y 3%.
+
+Además, para cada propuesta se contempla la opción de obtener $y_0$ tanto a través de la distribución Normal Estándar como la distribución Normal Power. En el caso de la Normal Estándar, $ y_0 = Z_{99} \cdot DS(Y) + E(Y)$; mientras que para el caso de la Normal Power, $y_0 = Y_{99} \cdot DS(Y) + E(Y)$ con $Y_{99} = Z_{99} + \frac{\gamma}{6} \cdot (Z^2_{99} -1 )$.
+
+
 ### Propuesta 1: Distribución Binomial Negativa + Distribución Log-Normal
 
 ```{r}
@@ -541,8 +548,6 @@ datos_simulados <- data.frame(
 )
 ```
 
-Se cobra la prima recargada que es la media de la siniestral anual 1787 millones de pesos + 1% de recargo
-Se cobra la prima recargada que es la media de la siniestral anual 1787 millones de pesos + 3% de recargo
 
 ```{r}
 z = qnorm(0.99)
@@ -589,6 +594,8 @@ datos_simulados |>
   theme(legend.position = "top")
 ```
 
+
+Se puede observar que la distribución Normal Power está levemente movida hacia la izquierda de la distribución Normal Estándar, por lo que estaría habiendo asimetria positiva pequeña y podría no haber diferencia entre los MSM obtenidos.
 
 
 ### Propuesta 2: Distribución Binomial Negativa + Distribución Gamma
@@ -648,17 +655,11 @@ datos_simulados |>
                 aes(color = "Normal Power"),show.legend = T, size = 1,
                 linetype = "dashed") +
   scale_color_manual(name = "Distribución", values = c("springgreen", "brown")) +
-  theme_bw() 
+  theme_bw() +
+  theme(legend.position = "top")
 ```
 
-
-
-```{r}
-ggplot() +
-  aes(x = cuantia_total_simulada2) +
-  geom_density()
-```
-
+Se puede observar que la distribución Normal Power está movida hacia la izquierda de la distribución Normal Estándar, por lo que habría asimetría no solo positiva sino mayor a la que presenta la propuesta 1 y podría haber diferencia entre los MSM obtenidos.
 
 
 ### Propuesta 3: Distribución Poisson + Distribución Log-Normal
@@ -723,11 +724,8 @@ datos_simulados |>
                 aes(color = "Normal Power"),show.legend = T, size = 1, 
                 linetype = "dashed") +
   scale_color_manual(name = "Distribución", values = c("springgreen", "brown")) +
-  theme_bw() 
+  theme_bw() +
+  theme(legend.position = "top")
 ```
 
-```{r}
-ggplot() +
-  aes(x = cuantia_total_simulada3) +
-  geom_density()
-```
+Se puede observar que la distribución Normal Power está levemente movida hacia la derecha de la distribución Normal Estándar, por lo que se estaría teniendo una asimetría negativo y podría no haber diferencia entre los MSM obtenido.
