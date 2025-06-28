@@ -1,3 +1,67 @@
+---
+format: 
+  pdf:
+    fig-pos: "H"
+    tbl-cap-location: top
+lang: es
+geometry:
+  - top= 25mm
+  - left= 20mm
+  - right = 20mm
+  - bottom = 25mm
+  - heightrounded
+warning: False
+message: False
+echo: False
+---
+
+
+::: {.center data-latex=""}
+
+\vspace{3cm}
+
+```{r logo facultad, echo=F, include = T, out.width= "60%"}
+knitr::include_graphics("logounr.png")
+```
+
+\pagenumbering{gobble}
+
+\vspace{5cm}
+
+\Large
+**LICENCIATURA EN ESTADÍSTICA**
+
+\vspace{1cm}
+
+\Large
+**Trabajo Práctico**
+
+
+\vspace{0.3cm}
+\large
+
+*Estadística Actuarial*
+
+\vspace{6cm}
+
+\large
+
+**Autores: Rocio Canteros - Franco Santini**
+
+**Docente: Adrián Wibly**
+
+**2025**
+\normalsize
+\newpage
+\hypersetup{linkcolor = black}
+\tableofcontents
+
+
+\newpage
+\pagenumbering{arabic}
+
+:::
+
 ```{r, echo =F, warning=F, message=F}
 # Librerias
 library(dplyr)
@@ -19,18 +83,13 @@ cer <- read_excel("../Datos/CER.xlsx")
 
 datos$Fecha <- lubridate::as_date(datos$Fecha)
 cer$Fecha <- lubridate::as_date(cer$Fecha)
-set.seed(1248)
-options(scipen = 999)
 
-datos$Fecha[1] + lubridate::days(45)
-cer$Fecha[354] + days(45)
+set.seed(1248) # Garantizar que los resultados sean reproducibles
+options(scipen = 999)
 ```
 
 ```{r, echo =F, warning=F, message=F}
 limite = cer$CER[cer$Fecha == (datos$Fecha[3431] + days(45))] 
-
-
-cer$CER[cer$Fecha == (datos$Fecha[1:3] + days(45))]
 ```
 
 ```{r, echo =F, warning=F, message=F}
@@ -57,6 +116,9 @@ En este informe, se buscará determinar el Margen de Solvencia Mínimo para una 
 Se realizó un análisis descriptivo de las cuantías ajustadas por inlfación de los siniestros.
 
 ```{r, echo =F, warning=F, message=F}
+#| fig-cap: "Distribución de las cuantías ajustadas por inflación de los siniestros por mes"
+#| label: fig-seg1
+
 cuantia_total <- sum(datos$Cuantia_ajust)
 
 meses <- c("Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -80,6 +142,9 @@ datos |>
 ```
 
 ```{r, echo =F, warning=F, message=F}
+#| fig-cap: "Distribución de los siniestros por mes"
+#| label: fig-seg2
+
 datos |> 
   mutate(mes = factor(month(Fecha), levels = 1:12, labels = meses)) |>
   group_by(mes) |> 
@@ -116,12 +181,6 @@ resumen <- data.frame(
   y = c(round(media_datos, 2),round(media_siniestros, 2) ),
   j = c(round(var_datos/1000000, 2), round(var_siniestros, 2))
 )
-
-kable(resumen, col.names = c("", "Media", "Variancia"), 
-                  format = "pipe") %>%
-  kable_styling() %>% 
-  add_footnote("La variancia de las cuantías está experesada en millones", notation = "none")
-
 ```
 
 
@@ -139,9 +198,16 @@ registro = data.frame(
 
 registro <- registro |> 
   mutate(lambda = round(siniestros/polizas, 4))
+```
 
-kable(registro,format = "pipe",
-                  col.names = c("Año", "Pólizas", "Siniestros", "$\\lambda$"))
+
+```{r, echo =F, warning=F, message=F}
+#| tbl-cap: "Información de la tasa de siniestros por año"
+#| label: tbl-seg1
+
+kable(registro,
+      format = "pipe",
+      col.names = c("Año", "Pólizas", "Siniestros", "$\\lambda$"))
 ```
 
 
@@ -155,13 +221,11 @@ Para lograr el objetivo propuesto -MSM que garantice una probabilidad de solvenc
 Con esta última información se calculará el MSM.
 
 
-
 ## Propuesta 1
 
 -   Distribución de los siniestros: Binomial negativa
 
-| Dado que no se considera adecuado suponer que la media y la variancia de los siniestro son iguales, se propone que la variancia es un 10% más grande que la media para poder estimar los parámetros. Dado que las cantidades varian maso asi
-| La estimación se basa en el método de los momentos:
+Dado que no se consideraba adecuado suponer que la media y la variancia de los siniestros fueran iguales, se propone que la varianza fuera un 10% mayor que la media para poder estimar los parámetros. Esto se realizaba teniendo en cuenta que los siniestros ocurridos en años anteriores variaban alrededor de 300 siniestros respecto del promedio. La estimación se basa en el método de los momentos:
 
 $$
 \begin{cases}
@@ -194,6 +258,13 @@ for (i in 1:k) {
 
 
 ```{r}
+#| label: fig-seg3
+#| layout: [[50], [50]]
+#| fig-cap: "Simulación de los siniestros con la distribución Binomial Negativa"
+#| fig-subcap: 
+#|   - "Distribución de los siniestros por póliza"
+#|   - "Simulación de la cantidad de siniestros totales"
+
 densidad_bn <- dnbinom(x = 0:10 ,prob = p, size = h)
 
 ggplot() +
@@ -201,34 +272,48 @@ ggplot() +
   geom_bar(stat = "identity", width = 0.2, fill  = "plum2") + 
   theme_bw()+
   labs(y = "Densidad", x = "Siniestros por póliza")
-```
 
-```{r}
 ggplot() +
   aes(x = siniestros) +
-  geom_histogram(bins = 40, fill = "gray21") +
-  labs(y = "Frecuencia", x = "Siniestro") +
+  geom_histogram(bins = 40, col = "black", fill = "plum2") +
+  labs(y = "Frecuencia", x = "Cantidad de siniestros") +
   theme_bw()
-
 ```
 
 
-$$
-\begin{array} {c|c|c}
- & \text{Media} & {\begin{array}{c}\text{Desvío} \\ \text{Estándar}\end{array}}  & \text{Mínimo} & \text{Máximo} & \text{Mediana} \\
-\hline
-Siniestros & 3391.48 & 60.85 & 3179 & 3609 & 3391
-\end{array}
-$$
+```{r}
+#| tbl-cap: "Medidas resúmenes de la simulación de los siniestros totales"
+#| label: tbl-seg2
+
+data.frame(
+  Media = mean(siniestros),
+  sd = sd(siniestros),
+  min = min(siniestros),
+  mediana = median(siniestros),
+  max = max(siniestros)
+) |> 
+  `row.names<-`("Siniestros") |> 
+  kable(format = "pipe",
+        col.names = c("Media", "Desvío Estándar", "Mínimo", "Mediana", "Máximo"),
+        digits = 2)
+```
+
+<!-- $$ -->
+<!-- \begin{array} {c|c|c} -->
+<!--  & \text{Media} & {\begin{array}{c}\text{Desvío} \\ \text{Estándar}\end{array}}  & \text{Mínimo} & \text{Máximo} & \text{Mediana} \\ -->
+<!-- \hline -->
+<!-- Siniestros & 3391.48 & 60.85 & 3179 & 3609 & 3391 -->
+<!-- \end{array} -->
+<!-- $$ -->
 
 -   Distribución de la cuantías: Log-Normal
 
-| Teniendo en cuenta que los datos de las cuantías individuales son asimétricos, se postula que podrían seguir la distribución planteada.
+Teniendo en cuenta que los datos de las cuantías individuales son asimétricos, se postula que podrían seguir la distribución planteada.
 
-| Los parámetros de la misma, se estiman a través del método de los momentos; partiendo del valor R, definido como $R = \frac{m_2}{(m_1)^2}$ donde $m_1$ es el momento de orden 1 y $m_2$ es el momento de orden 2.
+Los parámetros de la misma, se estiman a través del método de los momentos; partiendo del valor R, definido como $R = \frac{m_2}{(m_1)^2}$ donde $m_1$ es el momento de orden 1 y $m_2$ es el momento de orden 2.
 
 $$
-R = 1.2629 
+R = 1.2629
 \Rightarrow
 \begin{cases}
 \hat{\mu} = ln(m_1) - \frac{1}{2}ln(R) \\
@@ -239,7 +324,6 @@ R = 1.2629
 \hat{\mu} =  13.0465 \\
 \hat{\sigma} = 0.4831
 \end{cases}
-
 $$
 
 
@@ -251,6 +335,12 @@ r <- mom2/(mom1^2)
 
 sigma_est <- sqrt(log(r))
 mu_est <- log(mom1) - (1/2)*log(r)
+```
+
+
+```{r}
+#| fig-cap: "Distribución de las cuantías individuales ajustadas"
+#| label: fig-seg4
 
 datos |> 
   ggplot() +
@@ -270,13 +360,13 @@ Se puede ver que la distribución Log-Normal estaría siendo adecuada para las c
 
 -   Distribución de los siniestros: Binomial negativa
 
-| Se plantea el mismo supuesto, respecto a la variancia y la media, que se postuló en la propuesta 1.
+Se plantea el mismo supuesto, respecto a la variancia y la media, que se postuló en la propuesta 1.
 
 -   Distribución de la cuantías: Gamma 
 
-| Considerando que los datos de las cuantías individuales son continuos, positivos y asimétricos, se contempla que la distribución postulada podría ser adecuada para ellos. 
+Considerando que los datos de las cuantías individuales son continuos, positivos y asimétricos, se contempla que la distribución postulada podría ser adecuada para ellos. 
 
-| Los parámetros de la misma se estiman mediante el método de los momentos:
+Los parámetros de la misma se estiman mediante el método de los momentos:
 
 $$
 \begin{cases}
@@ -297,6 +387,9 @@ $$
 
 
 ```{r}
+#| fig-cap: "Distribución de las cuantías individuales ajustadas"
+#| label: fig-seg5
+
 alpha = (media_datos^2)/(var_datos)
 beta = var_datos/media_datos
 
@@ -321,7 +414,7 @@ Al igual que la Log-Normal, la distribución Gamma parecería que se adecua a lo
 
 -   Distribución de los siniestros: Poisson 
 
-| Pese a lo planteado en las propuestas anteriores, se propone que el número de siniestro seguiría una distribución Poisson; por lo tanto, se esta suponiendo que la media y la variancia son iguales.
+Pese a lo planteado en las propuestas anteriores, se propone que el número de siniestro seguiría una distribución Poisson; por lo tanto, se esta suponiendo que la media y la variancia son iguales.
 
 $$
 E(N) = V(N) = \lambda \; \Rightarrow \; \hat{\lambda} = 0.1324
@@ -341,6 +434,13 @@ for (i in 1:k) {
 ```
 
 ```{r}
+#| label: fig-seg6
+#| layout: [[50], [50]]
+#| fig-cap: "Simulación de los siniestros con la distribución Poisson"
+#| fig-subcap: 
+#|   - "Distribución de los siniestros por póliza"
+#|   - "Simulación de la cantidad de siniestros totales"
+ 
 densidad_poisson <- dpois(x = 0:10 ,lambda = media_lambda)
 
 ggplot() +
@@ -348,23 +448,39 @@ ggplot() +
   geom_bar(stat = "identity", width = 0.2, fill  = "plum2") + 
   theme_bw()+
   labs(y = "Densidad", x = "Siniestros por póliza")
-```
 
-```{r}
 ggplot() +
   aes(x = siniestros_poisson) +
-  geom_histogram(bins = 40, fill = "grey21") +
-  labs(y = "Frecuencia", x = "Siniestros") +
+  geom_histogram(bins = 40, col = "black", fill = "plum2") +
+  labs(y = "Frecuencia", x = "Cantidad de siniestros") +
   theme_bw()
 ```
 
-$$
-\begin{array} {c|c|c}
- & \text{Media} & {\begin{array}{c}\text{Desvío} \\ \text{Estándar}\end{array}}  & \text{Mínimo} & \text{Máximo} & \text{Mediana} \\
-\hline
-Siniestros & 3391.44 & 57.94 & 3166 & 3615 & 3392
-\end{array}
-$$
+```{r}
+#| tbl-cap: "Medidas resúmenes de la simulación de los siniestros totales"
+#| label: tbl-seg3
+
+data.frame(
+  Media = mean(siniestros_poisson),
+  sd = sd(siniestros_poisson),
+  min = min(siniestros_poisson),
+  mediana = median(siniestros_poisson),
+  max = max(siniestros_poisson)
+) |> 
+  `row.names<-`("Siniestros") |> 
+  kable(format = "pipe",
+        col.names = c("Media", "Desvío Estándar", "Mínimo", "Mediana", "Máximo"),
+        digits = 2)
+```
+
+
+<!-- $$ -->
+<!-- \begin{array} {c|c|c} -->
+<!--  & \text{Media} & {\begin{array}{c}\text{Desvío} \\ \text{Estándar}\end{array}}  & \text{Mínimo} & \text{Máximo} & \text{Mediana} \\ -->
+<!-- \hline -->
+<!-- Siniestros & 3391.44 & 57.94 & 3166 & 3615 & 3392 -->
+<!-- \end{array} -->
+<!-- $$ -->
 
 -   Distribución de la cuantías: Log-Normal
 
@@ -469,7 +585,8 @@ datos_simulados |>
                 aes(color = "Normal Power"),show.legend = T, size = 1,
                 linetype = "dashed") +
   scale_color_manual(name = "Distribución", values = c("springgreen", "brown")) +
-  theme_bw() 
+  theme_bw() +
+  theme(legend.position = "top")
 ```
 
 
