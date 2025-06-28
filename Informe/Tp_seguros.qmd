@@ -47,9 +47,9 @@ datos$Cuantia_ajust <- datos$Cuantía * limite/indice
 
 # Introducción
 
-Una empresa aseguradora resulta solvente cuando dispone o es capaz de recolectar los recursos necesarios para hacer frente a posibles siniestro no previstos. Sea cual sea la duración del seguro, hay una diferencia entre el momento en que se contrata y el momento en el que se cobra y es ahí donde la capacidad de solvencia de la compañia cobra importancia ya que sirve para que los clientes tengan la certeza de que ante la ocurrencia de un siniestro, esta va a ser capaz de cubrirlo.
+Una empresa aseguradora resulta solvente cuando dispone o es capaz de recolectar los recursos necesarios para hacer frente a posibles siniestro no previstos. Sea cual sea la duración del seguro, hay una diferencia entre el momento en que se contrata y el momento en el que se cobra, es ahí donde la capacidad de solvencia de la compañia cobra importancia ya que sirve para que los clientes tengan la certeza de que ante la ocurrencia de un siniestro, esta va a ser capaz de cubrirlo.
 
-En este informe, se buscará determinar el Margen de Solvencia Mínimo para una subcartera de pólizas de seguros de automotores de una determinada compañia, de forma tal que su Probabilidad de Solvencia sea del 99% durante el año 2024. Los datos con lo que se cuenta pertenecen al año 2023 entonces, debido al contexto inflacionario del país, para trabajar en el 2024 se realizo un ajuste por inflación a través del indice CER, considerando 45 días de rezago; esto debido a que el dato inflacionario se publica 30 días tarde y el indice CER demora 15 días más.  
+En este informe, se buscará determinar el Margen de Solvencia Mínimo para una subcartera de pólizas de seguros de automotores de una determinada compañia, de forma tal que su Probabilidad de Solvencia sea del 99% durante el año 2024. Los datos con los que se cuenta pertenecen al año 2023 entonces, debido al contexto inflacionario del país, para trabajar en el 2024 se realizó un ajuste por inflación a través del indice CER, considerando 45 días de rezago; esto debido a que el dato inflacionario se publica 30 días tarde y el indice CER demora 15 días más.  
 
 
 ## Análisis descriptivo
@@ -419,6 +419,10 @@ media_ej1 <- mean(esperanzas_simuladas) # Esperanza del ejercicio
 var_ej1 <- mean(variancias_simuladas) # Variancia del ejercicio
 
 media_cuantia_total <- media_ej1 * media_siniestros_simulados1
+
+datos_simulados <- data.frame(
+  prop1 = cuantia_total_simulada
+)
 ```
 
 Se cobra la prima recargada que es la media de la siniestral anual 1787 millones de pesos + 1% de recargo
@@ -430,7 +434,7 @@ y1 = z + (skewness(cuantia_total_simulada)/6)*(z^2 - 1)
 
 prop1 <- data.frame(
   RS = c("1%", "3%"),
-  #agregar la prima pura,
+  PP = c(mean(cuantia_total_simulada), mean(cuantia_total_simulada)),
   PR = c(mean(cuantia_total_simulada)*1.01, mean(cuantia_total_simulada)*1.03),
   P_N = c(z*sd(cuantia_total_simulada)+mean(cuantia_total_simulada), z*sd(cuantia_total_simulada)+mean(cuantia_total_simulada))
 ) |> 
@@ -441,12 +445,7 @@ prop1 <- data.frame(
 ```
 
 ```{r}
-datos_simulados <- data.frame(
-  prop1 = cuantia_total_simulada,
-  prop2 = cuantia_total_simulada2,
-  prop3 = cuantia_total_simulada3
-)
-
+# Función para calcular la densidad de Normal Power
 dnp <- function(x, mu, sigma, asim) {
   y <- ((x-mu)/sigma) + (asim/6)*(((x-mu)/sigma)^2-1)
   (1/(sqrt(2*pi)*sigma))*exp(-0.5*(((y*sigma+mu)-mu)/sigma)^2)
@@ -454,28 +453,23 @@ dnp <- function(x, mu, sigma, asim) {
 ```
 
 
-
-
 ```{r}
 datos_simulados |> 
   ggplot() +
   aes(x = cuantia_total_simulada) +
-  geom_histogram(aes(y = after_stat(density)), bins = 50) +
-  stat_function(fun = dnorm, args = list(mean = mean(cuantia_total_simulada),
+  geom_histogram(aes(y = after_stat(density)), bins = 50, fill = "grey21") +
+  labs(x = "Cuantía total", y = "Densidad") +
+  scale_x_continuous(breaks = c(1650000000, 1770000000,1890000000)) +
+  geom_function(fun = dnorm, args = list(mean = mean(cuantia_total_simulada),
                                          sd = sd(cuantia_total_simulada)), 
-                color = "springgreen3", size = 1)
-
-datos_simulados |> 
-  ggplot() +
-  aes(x = cuantia_total_simulada) +
-  geom_histogram(aes(y = after_stat(density)), bins = 50) +
-    stat_function(fun = dnorm, args = list(mean = mean(cuantia_total_simulada),
-                                         sd = sd(cuantia_total_simulada)), 
-                color = "springgreen3", size = 1) +
-  stat_function(fun = dnp, args = list(mu = mean(cuantia_total_simulada),
+                aes(color = "Normal Estándar"), size = 1, show.legend = T) +
+  geom_function(fun = dnp, args = list(mu = mean(cuantia_total_simulada),
                                        sigma = sd(cuantia_total_simulada),
-                                       asim = skewness(cuantia_total_simulada)), 
-                color = "firebrick2", size = 1)
+                                       asim = skewness(cuantia_total_simulada)),
+                aes(color = "Normal Power"),show.legend = T, size = 1,
+                linetype = "dashed") +
+  scale_color_manual(name = "Distribución", values = c("springgreen", "brown")) +
+  theme_bw() 
 ```
 
 
@@ -501,6 +495,8 @@ media_ej2 <- mean(esperanzas_simuladas2) # Esperanza del ejercicio
 var_ej2 <- mean(variancias_simuladas2) # Variancia del ejercicio
 
 media_cuantia_total2 <- media_ej2 * media_siniestros_simulados1
+
+datos_simulados$prop2 <- cuantia_total_simulada2
 ```
 
 
@@ -510,6 +506,7 @@ y2 = z + (skewness(cuantia_total_simulada2)/6)*(z^2 - 1)
 
 prop2 <- data.frame(
   RS = c("1%", "3%"),
+  PP = c(mean(cuantia_total_simulada2), mean(cuantia_total_simulada2)),
   PR = c(mean(cuantia_total_simulada2)*1.01, mean(cuantia_total_simulada2)*1.03),
   P_N = c(z*sd(cuantia_total_simulada2)+mean(cuantia_total_simulada2), z*sd(cuantia_total_simulada2)+mean(cuantia_total_simulada2))
 ) |> 
@@ -517,6 +514,26 @@ prop2 <- data.frame(
   mutate(P_NP = c(y2*sd(cuantia_total_simulada2)+mean(cuantia_total_simulada2), y2*sd(cuantia_total_simulada2)+mean(cuantia_total_simulada2))) |> 
   mutate(MSM_np = P_NP - PR)
 ```
+
+```{r}
+datos_simulados |> 
+  ggplot() +
+  aes(x = cuantia_total_simulada2) +
+  geom_histogram(aes(y = after_stat(density)), bins = 50, fill = "grey21") +
+  labs(x = "Cuantía total", y = "Densidad") +
+  scale_x_continuous(breaks = c(1650000000, 1770000000,1890000000)) +
+  geom_function(fun = dnorm, args = list(mean = mean(cuantia_total_simulada2),
+                                         sd = sd(cuantia_total_simulada2)), 
+                aes(color = "Normal Estándar"), size = 1, show.legend = T) +
+  geom_function(fun = dnp, args = list(mu = mean(cuantia_total_simulada2),
+                                       sigma = sd(cuantia_total_simulada2),
+                                       asim = skewness(cuantia_total_simulada2)),
+                aes(color = "Normal Power"),show.legend = T, size = 1,
+                linetype = "dashed") +
+  scale_color_manual(name = "Distribución", values = c("springgreen", "brown")) +
+  theme_bw() 
+```
+
 
 
 ```{r}
@@ -552,6 +569,8 @@ media_ej3 <- mean(esperanzas_simuladas3) # Esperanza del ejercicio
 var_ej3 <- mean(variancias_simuladas3) # Variancia del ejercicio
 
 media_cuantia_total3 <- media_ej3 * media_siniestros_simulados3
+
+datos_simulados$prop3 <- cuantia_total_simulada3
 ```
 
 
@@ -561,6 +580,7 @@ y3 = z + (skewness(cuantia_total_simulada3)/6)*(z^2 - 1)
 
 prop3 <- data.frame(
   RS = c("1%", "3%"),
+  PP = c(mean(cuantia_total_simulada3), mean(cuantia_total_simulada3)),
   PR = c(mean(cuantia_total_simulada3)*1.01, mean(cuantia_total_simulada3)*1.03),
   P_N = c(z*sd(cuantia_total_simulada3)+mean(cuantia_total_simulada3), z*sd(cuantia_total_simulada3)+mean(cuantia_total_simulada3))
 ) |> 
@@ -569,6 +589,25 @@ prop3 <- data.frame(
   mutate(MSM_np = P_NP - PR)
 ```
 
+
+```{r}
+datos_simulados |> 
+  ggplot() +
+  aes(x = cuantia_total_simulada3) +
+  geom_histogram(aes(y = after_stat(density)), bins = 50, fill = "grey21") +
+  labs(x = "Cuantía total", y = "Densidad") +
+  scale_x_continuous(breaks = c(1650000000, 1770000000,1890000000)) +
+  geom_function(fun = dnorm, args = list(mean = mean(cuantia_total_simulada3),
+                                         sd = sd(cuantia_total_simulada3)), 
+                aes(color = "Normal Estándar"), size = 1, show.legend = T) +
+  geom_function(fun = dnp, args = list(mu = mean(cuantia_total_simulada3),
+                                       sigma = sd(cuantia_total_simulada3),
+                                       asim = skewness(cuantia_total_simulada3)),
+                aes(color = "Normal Power"),show.legend = T, size = 1, 
+                linetype = "dashed") +
+  scale_color_manual(name = "Distribución", values = c("springgreen", "brown")) +
+  theme_bw() 
+```
 
 ```{r}
 ggplot() +
