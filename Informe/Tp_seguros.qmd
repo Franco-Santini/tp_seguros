@@ -6,8 +6,8 @@ format:
 lang: es
 geometry:
   - top= 25mm
-  - left= 20mm
-  - right = 20mm
+  - left= 18mm
+  - right = 18mm
   - bottom = 25mm
   - heightrounded
 warning: False
@@ -42,7 +42,7 @@ knitr::include_graphics("logounr.png")
 
 *Estadística Actuarial*
 
-\vspace{6cm}
+\vspace{7cm}
 
 \large
 
@@ -106,7 +106,7 @@ datos$Cuantia_ajust <- datos$Cuantía * limite/indice
 
 # Introducción
 
-Una empresa aseguradora resulta solvente cuando dispone o es capaz de recolectar los recursos necesarios para hacer frente a posibles siniestro no previstos. Sea cual sea la duración del seguro, hay una diferencia entre el momento en que se contrata y el momento en el que se cobra, es ahí donde la capacidad de solvencia de la compañia cobra importancia ya que sirve para que los clientes tengan la certeza de que ante la ocurrencia de un siniestro, esta va a ser capaz de cubrirlo.
+Una empresa aseguradora resulta solvente cuando dispone o es capaz de recolectar los recursos necesarios para hacer frente a posibles siniestros no previstos. Sea cual sea la duración del seguro, hay una diferencia entre el momento en que se contrata y el momento en el que se cobra, es ahí donde la capacidad de solvencia de la compañia cobra importancia ya que sirve para que los clientes tengan la certeza de que ante la ocurrencia de un siniestro, esta va a ser capaz de cubrirlo.
 
 En este informe, se buscará determinar el Margen de Solvencia Mínimo para una subcartera de pólizas de seguros de automotores de una determinada compañia, de forma tal que su Probabilidad de Solvencia sea del 99% durante el año 2024. Los datos con los que se cuenta pertenecen al año 2023 entonces, debido al contexto inflacionario del país, para trabajar en el 2024 se realizó un ajuste por inflación a través del indice CER, considerando 45 días de rezago; esto debido a que el dato inflacionario se publica 30 días tarde y el indice CER demora 15 días más.  
 
@@ -221,7 +221,7 @@ Para lograr el objetivo propuesto -MSM que garantice una probabilidad de solvenc
 Con esta última información se calculará el MSM.
 
 
-## Propuesta 1
+## Propuesta 1{#propuesta1}
 
 -   Distribución de los siniestros: Binomial negativa
 
@@ -349,7 +349,7 @@ datos |>
   stat_function(fun = dlnorm, args = list(meanlog = mu_est, sdlog = sigma_est), 
                 color = "orangered", size = 1) +
   theme_bw() +
-  labs(y = "Densidad", x = "Cuantía ajustada")
+  labs(y = "Densidad", x = "Cuantía ajustada (en pesos)")
 ```
 
 Se puede ver que la distribución Log-Normal estaría siendo adecuada para las cuantías individuales. 
@@ -360,7 +360,7 @@ Se puede ver que la distribución Log-Normal estaría siendo adecuada para las c
 
 -   Distribución de los siniestros: Binomial negativa
 
-Se plantea el mismo supuesto, respecto a la variancia y la media, que se postuló en la propuesta 1.
+Se plantea el mismo supuesto, respecto a la variancia y la media, que se postuló en la @propuesta1
 
 -   Distribución de la cuantías: Gamma 
 
@@ -402,7 +402,7 @@ datos |>
     # stat_function(fun = dlnorm, args = list(meanlog = mu_est, sdlog = sigma_est), 
     #             color = "orangered", size = 1) +
   theme_bw() +
-  labs(y = "Densidad", x = "Cuantía ajustada")
+  labs(y = "Densidad", x = "Cuantía ajustada (en pesos)")
 ```
 
 
@@ -419,6 +419,8 @@ Pese a lo planteado en las propuestas anteriores, se propone que el número de s
 $$
 E(N) = V(N) = \lambda \; \Rightarrow \; \hat{\lambda} = 0.1324
 $$
+
+\newpage
 
 ```{r}
 n_polizas <- 25615 
@@ -506,7 +508,7 @@ mu_est <- log(mom1) - (1/2)*log(r)
 ```
 
 
-Al ser los mismos parámetros estimados, el ajuste de la distribución Log-Normal será el mismo que para el caso donde el número de siniestros sigue la Binomial Negativa.
+Al ser los mismos parámetros estimados, el ajuste de la distribución Log-Normal será el mismo que para el caso donde el número de siniestros sigue la Binomial Negativa, como se muestra en la @fig-seg4.
 
 
 ## Resultados
@@ -515,7 +517,7 @@ Como se mencionó antes, con las simulaciones de las cuantías individuales, se 
 
 Cabe aclarar que la prima recargada es simplemente la prima pura (PP), la media de la siniestralidad anual, más un porcentaje de esa prima: $PR = PP + \alpha \cdot PP$. En el presente trabajo los recargos que se le agregan a la prima pura serán del 1% y 3%.
 
-Además, para cada propuesta se contempla la opción de obtener $y_0$ tanto a través de la distribución Normal Estándar como la distribución Normal Power. En el caso de la Normal Estándar, $ y_0 = Z_{99} \cdot DS(Y) + E(Y)$; mientras que para el caso de la Normal Power, $y_0 = Y_{99} \cdot DS(Y) + E(Y)$ con $Y_{99} = Z_{99} + \frac{\gamma}{6} \cdot (Z^2_{99} -1 )$.
+Además, para cada propuesta se contempla la opción de obtener $y_0$ tanto a través de la distribución Normal Estándar como la distribución Normal Power. En el caso de la Normal Estándar, $y_0 = Z_{99} \cdot DS(Y) + E(Y)$; mientras que para el caso de la Normal Power, $y_0 = Y_{99} \cdot DS(Y) + E(Y)$ con $Y_{99} = Z_{99} + \frac{\gamma}{6} \cdot (Z^2_{99} -1 )$. Siendo $Z_{99} \ \text{e} \ Y_{99}$ los percentiles que acumulan 99% de probabilidad en la distribución Normal y Normal Power respectivamente.
 
 
 ### Propuesta 1: Distribución Binomial Negativa + Distribución Log-Normal
@@ -555,12 +557,12 @@ y1 = z + (skewness(cuantia_total_simulada)/6)*(z^2 - 1)
 
 prop1 <- data.frame(
   RS = c("1%", "3%"),
-  PP = c(mean(cuantia_total_simulada), mean(cuantia_total_simulada)),
-  PR = c(mean(cuantia_total_simulada)*1.01, mean(cuantia_total_simulada)*1.03),
-  P_N = c(z*sd(cuantia_total_simulada)+mean(cuantia_total_simulada), z*sd(cuantia_total_simulada)+mean(cuantia_total_simulada))
+  PP = c(mean(cuantia_total_simulada)/1000000, mean(cuantia_total_simulada)/1000000),
+  PR = c(mean(cuantia_total_simulada)*1.01/1000000, mean(cuantia_total_simulada)*1.03/1000000),
+  P_N = c(z*sd(cuantia_total_simulada)/1000000+mean(cuantia_total_simulada)/1000000, z*sd(cuantia_total_simulada)/1000000+mean(cuantia_total_simulada)/1000000)
 ) |> 
   mutate(MSM_n = P_N - PR) |> 
-  mutate(P_NP = c(y1*sd(cuantia_total_simulada)+mean(cuantia_total_simulada), y1*sd(cuantia_total_simulada)+mean(cuantia_total_simulada))) |> 
+  mutate(P_NP = c(y1*sd(cuantia_total_simulada)/1000000+mean(cuantia_total_simulada)/1000000, y1*sd(cuantia_total_simulada)/1000000+mean(cuantia_total_simulada)/1000000)) |> 
   mutate(MSM_np = P_NP - PR)
 
 ```
@@ -575,19 +577,22 @@ dnp <- function(x, mu, sigma, asim) {
 
 
 ```{r}
+#| fig-cap: "Distribución de la cuantía total"
+#| label: fig-seg7
+
 datos_simulados |> 
   ggplot() +
-  aes(x = cuantia_total_simulada) +
+  aes(x = cuantia_total_simulada/1000000) +
   geom_histogram(aes(y = after_stat(density)), bins = 50, fill = "grey21") +
-  labs(x = "Cuantía total", y = "Densidad") +
-  scale_x_continuous(breaks = c(1650000000, 1770000000,1890000000)) +
-  geom_function(fun = dnorm, args = list(mean = mean(cuantia_total_simulada),
-                                         sd = sd(cuantia_total_simulada)), 
-                aes(color = "Normal Estándar"), size = 1, show.legend = T) +
-  geom_function(fun = dnp, args = list(mu = mean(cuantia_total_simulada),
-                                       sigma = sd(cuantia_total_simulada),
+  labs(x = "Cuantía total (en millones de pesos)", y = "Densidad") +
+  scale_x_continuous(breaks = c(1650, 1770, 1900)) +
+  geom_function(fun = dnorm, args = list(mean = mean(cuantia_total_simulada)/1000000,
+                                         sd = sd(cuantia_total_simulada)/1000000), 
+                aes(color = "Normal"), size = 0.7, show.legend = T) +
+  geom_function(fun = dnp, args = list(mu = mean(cuantia_total_simulada)/1000000,
+                                       sigma = sd(cuantia_total_simulada)/1000000,
                                        asim = skewness(cuantia_total_simulada)),
-                aes(color = "Normal Power"),show.legend = T, size = 1,
+                aes(color = "Normal Power"),show.legend = T, size = 0.7,
                 linetype = "dashed") +
   scale_color_manual(name = "Distribución", values = c("springgreen", "brown")) +
   theme_bw() +
@@ -595,7 +600,7 @@ datos_simulados |>
 ```
 
 
-Se puede observar que la distribución Normal Power está levemente movida hacia la izquierda de la distribución Normal Estándar, por lo que estaría habiendo asimetria positiva pequeña y podría no haber diferencia entre los MSM obtenidos.
+Se puede observar que la distribución Normal Power está levemente movida hacia la izquierda de la distribución Normal, por lo que estaría habiendo asimetria positiva pequeña y podría no haber diferencia entre los MSM obtenidos.
 
 
 ### Propuesta 2: Distribución Binomial Negativa + Distribución Gamma
@@ -630,40 +635,42 @@ y2 = z + (skewness(cuantia_total_simulada2)/6)*(z^2 - 1)
 
 prop2 <- data.frame(
   RS = c("1%", "3%"),
-  PP = c(mean(cuantia_total_simulada2), mean(cuantia_total_simulada2)),
-  PR = c(mean(cuantia_total_simulada2)*1.01, mean(cuantia_total_simulada2)*1.03),
-  P_N = c(z*sd(cuantia_total_simulada2)+mean(cuantia_total_simulada2), z*sd(cuantia_total_simulada2)+mean(cuantia_total_simulada2))
+  PP = c(mean(cuantia_total_simulada2)/1000000, mean(cuantia_total_simulada2)/1000000),
+  PR = c(mean(cuantia_total_simulada2)*1.01/1000000, mean(cuantia_total_simulada2)*1.03/1000000),
+  P_N = c(z*sd(cuantia_total_simulada2)/1000000+mean(cuantia_total_simulada2)/1000000, z*sd(cuantia_total_simulada2)/1000000+mean(cuantia_total_simulada2)/1000000)
 ) |> 
   mutate(MSM_n = P_N - PR) |> 
-  mutate(P_NP = c(y2*sd(cuantia_total_simulada2)+mean(cuantia_total_simulada2), y2*sd(cuantia_total_simulada2)+mean(cuantia_total_simulada2))) |> 
+  mutate(P_NP = c(y2*sd(cuantia_total_simulada2)/1000000+mean(cuantia_total_simulada2)/1000000, y2*sd(cuantia_total_simulada2)/1000000+mean(cuantia_total_simulada2)/1000000)) |> 
   mutate(MSM_np = P_NP - PR)
 ```
 
 ```{r}
+#| fig-cap: "Distribución de la cuantía total"
+#| label: fig-seg8
+
 datos_simulados |> 
   ggplot() +
-  aes(x = cuantia_total_simulada2) +
+  aes(x = cuantia_total_simulada2/1000000) +
   geom_histogram(aes(y = after_stat(density)), bins = 50, fill = "grey21") +
-  labs(x = "Cuantía total", y = "Densidad") +
-  scale_x_continuous(breaks = c(1650000000, 1770000000,1890000000)) +
-  geom_function(fun = dnorm, args = list(mean = mean(cuantia_total_simulada2),
-                                         sd = sd(cuantia_total_simulada2)), 
-                aes(color = "Normal Estándar"), size = 1, show.legend = T) +
-  geom_function(fun = dnp, args = list(mu = mean(cuantia_total_simulada2),
-                                       sigma = sd(cuantia_total_simulada2),
+  labs(x = "Cuantía total (en millones de pesos)", y = "Densidad") +
+  scale_x_continuous(breaks = c(1650, 1770,1900)) +
+  geom_function(fun = dnorm, args = list(mean = mean(cuantia_total_simulada2)/1000000,
+                                         sd = sd(cuantia_total_simulada2)/1000000), 
+                aes(color = "Normal"), size = 0.7, show.legend = T) +
+  geom_function(fun = dnp, args = list(mu = mean(cuantia_total_simulada2)/1000000,
+                                       sigma = sd(cuantia_total_simulada2)/1000000,
                                        asim = skewness(cuantia_total_simulada2)),
-                aes(color = "Normal Power"),show.legend = T, size = 1,
+                aes(color = "Normal Power"),show.legend = T, size = 0.7,
                 linetype = "dashed") +
   scale_color_manual(name = "Distribución", values = c("springgreen", "brown")) +
   theme_bw() +
   theme(legend.position = "top")
 ```
 
-Se puede observar que la distribución Normal Power está movida hacia la izquierda de la distribución Normal Estándar, por lo que habría asimetría no solo positiva sino mayor a la que presenta la propuesta 1 y podría haber diferencia entre los MSM obtenidos.
+Se puede observar que la distribución Normal Power está movida hacia la izquierda de la distribución Normal, por lo que habría asimetría no solo positiva sino mayor a la que presenta la propuesta 1 y podría haber diferencia entre los MSM obtenidos.
 
 
 ### Propuesta 3: Distribución Poisson + Distribución Log-Normal
-
 
 ```{r}
 # Simulación de las cuantías individuales y totales
@@ -698,34 +705,83 @@ y3 = z + (skewness(cuantia_total_simulada3)/6)*(z^2 - 1)
 
 prop3 <- data.frame(
   RS = c("1%", "3%"),
-  PP = c(mean(cuantia_total_simulada3), mean(cuantia_total_simulada3)),
-  PR = c(mean(cuantia_total_simulada3)*1.01, mean(cuantia_total_simulada3)*1.03),
-  P_N = c(z*sd(cuantia_total_simulada3)+mean(cuantia_total_simulada3), z*sd(cuantia_total_simulada3)+mean(cuantia_total_simulada3))
+  PP = c(mean(cuantia_total_simulada3)/1000000, mean(cuantia_total_simulada3)/1000000),
+  PR = c(mean(cuantia_total_simulada3)*1.01/1000000, mean(cuantia_total_simulada3)*1.03/1000000),
+  P_N = c(z*sd(cuantia_total_simulada3)/1000000+mean(cuantia_total_simulada3)/1000000, z*sd(cuantia_total_simulada3)/1000000+mean(cuantia_total_simulada3)/1000000)
 ) |> 
   mutate(MSM_n = P_N - PR) |> 
-  mutate(P_NP = c(y3*sd(cuantia_total_simulada3)+mean(cuantia_total_simulada3), y3*sd(cuantia_total_simulada3)+mean(cuantia_total_simulada3))) |> 
+  mutate(P_NP = c(y3*sd(cuantia_total_simulada3)/1000000+mean(cuantia_total_simulada3)/1000000, y3*sd(cuantia_total_simulada3)/1000000+mean(cuantia_total_simulada3)/1000000)) |> 
   mutate(MSM_np = P_NP - PR)
 ```
 
 
 ```{r}
+#| fig-cap: "Distribución de la cuantía total"
+#| label: fig-seg9
+
 datos_simulados |> 
   ggplot() +
-  aes(x = cuantia_total_simulada3) +
+  aes(x = cuantia_total_simulada3/1000000) +
   geom_histogram(aes(y = after_stat(density)), bins = 50, fill = "grey21") +
   labs(x = "Cuantía total", y = "Densidad") +
-  scale_x_continuous(breaks = c(1650000000, 1770000000,1890000000)) +
-  geom_function(fun = dnorm, args = list(mean = mean(cuantia_total_simulada3),
-                                         sd = sd(cuantia_total_simulada3)), 
-                aes(color = "Normal Estándar"), size = 1, show.legend = T) +
-  geom_function(fun = dnp, args = list(mu = mean(cuantia_total_simulada3),
-                                       sigma = sd(cuantia_total_simulada3),
+  scale_x_continuous(breaks = c(1650, 1770,1900)) +
+  geom_function(fun = dnorm, args = list(mean = mean(cuantia_total_simulada3)/1000000,
+                                         sd = sd(cuantia_total_simulada3)/1000000), 
+                aes(color = "Normal"), size = 0.7, show.legend = T) +
+  geom_function(fun = dnp, args = list(mu = mean(cuantia_total_simulada3)/1000000,
+                                       sigma = sd(cuantia_total_simulada3)/1000000,
                                        asim = skewness(cuantia_total_simulada3)),
-                aes(color = "Normal Power"),show.legend = T, size = 1, 
+                aes(color = "Normal Power"),show.legend = T, size = 0.7, 
                 linetype = "dashed") +
   scale_color_manual(name = "Distribución", values = c("springgreen", "brown")) +
   theme_bw() +
   theme(legend.position = "top")
 ```
 
-Se puede observar que la distribución Normal Power está levemente movida hacia la derecha de la distribución Normal Estándar, por lo que se estaría teniendo una asimetría negativo y podría no haber diferencia entre los MSM obtenido.
+Se puede observar que la distribución Normal Power está levemente movida hacia la derecha de la distribución Normal, por lo que se estaría teniendo una asimetría negativo y podría no haber diferencia entre los MSM obtenido.
+
+```{r}
+#| tbl-cap: "Medidas resúmenes de las simulaciones de la cuantía total"
+#| label: tbl-seg4
+
+data.frame(
+  min = c(min(cuantia_total_simulada)/1000000, min(cuantia_total_simulada2)/1000000, min(cuantia_total_simulada3)/1000000),
+  p25 = c(quantile(cuantia_total_simulada, probs = 0.25)/1000000, quantile(cuantia_total_simulada2, probs = 0.25)/1000000, quantile(cuantia_total_simulada3, probs = 0.25)/1000000),
+  p50 = c(quantile(cuantia_total_simulada, probs = 0.5)/1000000, quantile(cuantia_total_simulada2, probs = 0.5)/1000000, quantile(cuantia_total_simulada3, probs = 0.5)/1000000),
+  p75 = c(quantile(cuantia_total_simulada, probs = 0.75)/1000000, quantile(cuantia_total_simulada2, probs = 0.75)/1000000, quantile(cuantia_total_simulada3, probs = 0.75)/1000000),
+  p99 = c(quantile(cuantia_total_simulada, probs = 0.99)/1000000, quantile(cuantia_total_simulada2, probs = 0.99)/1000000, quantile(cuantia_total_simulada3, probs = 0.99)/1000000),
+  max = c(max(cuantia_total_simulada)/1000000, max(cuantia_total_simulada2)/1000000, max(cuantia_total_simulada3)/1000000)) |> 
+  `rownames<-`(c("BN+LogNormal", "BN+Gamma", "Pois+LogNormal")) |> 
+  kable(format = "pipe", digits = 2, col.names = c("Propuesta", "Mín", "$P_{25}$", "$P_{50}$", "$P_{75}$", "$P_{99}$", "Max")) |> 
+  add_footnote("Los valores están expresados en millones de pesos", notation = "none")
+```
+
+En la @tbl-seg4, se puede notar qué las distribuciones de las cuantías totales simuladas se comportan de forma similar en las 3 propuestas, siendo el método más conservador "BN+Gamma" dado que el valor que acumula un 99% de probabilidad es más grande que para los métodos restantes.
+
+\newpage
+
+# Conclusión
+
+En última instancia, se calculan los MSM (Margen de Solvencia Mínimo) tanto para la distribución Normal -$MSM_{Normal}$- como para la distribución Normal Power -$MSM_{Normal Power}$-, a partir de la PR (Prima Recargada), que se construye como la PP (Prima Pura) más el RS (Recargo de Seguridad), para tomar una decisión sobre qué propuesta seleccionar para garantizar una probabilidad de solvencia del 99%.  
+
+```{r}
+#| tbl-cap: "Resultados de la simulación de la cuantía total"
+#| label: tbl-seg5
+
+rbind(prop1, prop2, prop3) |> 
+  `rownames<-`(c("BN+LogNormal", "BN+LogNormal ", "BN+Gamma", "BN+Gamma ", "Pois+LogNormal", "Pois+LogNormal ")) |> 
+  kable(format = "pipe", digits = 2, col.names = c("Propuesta","RS", "PP", "PR", "$Z_{99}$", "$MSM_{Normal}$", "$Y_{99}$", "$MSM_{Normal Power}$")) |> 
+  add_footnote("Los valores están expresados en millones de pesos", notation = "none")
+```
+
+En la @tbl-seg5 se puede observar que, el mayor MSM se obtiene usando la propuesta "BN+Gamma" asumiendo una distribución Normal Power y con un porcentaje de recargo de seguridad del 1%, en consecuencia, el menor MSM se obtiene usando la propuesta "Poisson+LogNormal" asumiendo una distribución Normal Power y con un porcentaje de recargo de seguridad del 3%.
+
+Por último, si tendríamos que elegir una propuesta para ésta situación, nos inclinariamos por la "BN+Gamma" usando un porcentaje de recargo de seguridad del 3% y suponiendo que las cuantías totales se distribuyen como una Normal Power, dado que, el MSM es aceptable además, si se cobran las primas recargadas (por un valor de `r round(prop2$PR[2], 2)` millones de pesos) nos estaríamos garantizando la solvencia en caso de que en este año se repitan las cuantías siniestrales totales del año 2023, ya que éstas fueron de `r round(cuantia_total/1000000, 2)` millones de pesos.
+
+\newpage
+
+# Anexo
+
+Todo lo realizado en el trabajo se encuentra en el siguiente repositorio el cuál se accede haciendo [click aquí](https://github.com/Franco-Santini/tp_seguros).
+
+
