@@ -724,7 +724,7 @@ datos_simulados |>
   aes(x = cuantia_total_simulada3/1000000) +
   geom_histogram(aes(y = after_stat(density)), bins = 50, fill = "grey21") +
   labs(x = "Cuantía total", y = "Densidad") +
-  scale_x_continuous(breaks = c(1650, 1770,1900)) +
+  scale_x_continuous(breaks = c(1650, 1770,1890)) +
   geom_function(fun = dnorm, args = list(mean = mean(cuantia_total_simulada3)/1000000,
                                          sd = sd(cuantia_total_simulada3)/1000000), 
                 aes(color = "Normal"), size = 0.7, show.legend = T) +
