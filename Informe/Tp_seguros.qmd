@@ -108,7 +108,7 @@ datos$Cuantia_ajust <- datos$Cuantía * limite/indice
 
 Una empresa aseguradora resulta solvente cuando dispone o es capaz de recolectar los recursos necesarios para hacer frente a posibles siniestros no previstos. Sea cual sea la duración del seguro, hay una diferencia entre el momento en que se contrata y el momento en el que se cobra, es ahí donde la capacidad de solvencia de la compañia cobra importancia ya que sirve para que los clientes tengan la certeza de que ante la ocurrencia de un siniestro, esta va a ser capaz de cubrirlo.
 
-En este informe, se buscará determinar el Margen de Solvencia Mínimo para una subcartera de pólizas de seguros de automotores de una determinada compañia, de forma tal que su Probabilidad de Solvencia sea del 99% durante el año 2024. Los datos con los que se cuenta pertenecen al año 2023 entonces, debido al contexto inflacionario del país, para trabajar en el 2024 se realizó un ajuste por inflación a través del indice CER, considerando 45 días de rezago, siguiendo la formula: $Cuantia \ Ajustada = Cuantia \cdot \frac{CER_{12/02/24}}{CER_{fecha \ cuantia + 45 \ dias}}$.  
+En este informe, se buscará determinar el Margen de Solvencia Mínimo para una subcartera de pólizas de seguros de automotores de una determinada compañia, de forma tal que su Probabilidad de Solvencia sea del 99% durante el año 2024. Los datos con los que se cuenta pertenecen al año 2023 entonces, debido al contexto inflacionario del país, para trabajar en el 2024 se realizó un ajuste por inflación a través del indice CER, considerando 45 días de rezago, siguiendo la formula: $\\ Cuantia \ Ajustada = Cuantia \cdot \frac{CER_{12/02/24}}{CER_{fecha \ cuantia + 45 \ dias}}$.  
 
 
 ## Análisis descriptivo
@@ -375,29 +375,25 @@ mu_est <- log(mom1) - (1/2)*log(r)
 
 
 ```{r}
-#| fig-cap: "Distribución de las cuantías individuales ajustadas"
-#| label: fig-seg4
-
-datos |> 
-  ggplot() +
-  aes(x = Cuantia_ajust) +
-  geom_histogram(aes(y = after_stat(density)), bins = 80, fill = "grey21") +
-  stat_function(fun = dlnorm, args = list(meanlog = mu_est, sdlog = sigma_est), 
-                color = "orangered", size = 1) +
-  scale_x_continuous(limits = c(0,2000000)) +
-  theme_bw() +
-  labs(y = "Densidad", x = "Cuantía ajustada (en pesos)")
+# #| fig-cap: "Distribución de las cuantías individuales ajustadas"
+# #| label: fig-seg4
+# 
+# datos |> 
+#   ggplot() +
+#   aes(x = Cuantia_ajust) +
+#   geom_histogram(aes(y = after_stat(density)), bins = 80, fill = "grey21") +
+#   stat_function(fun = dlnorm, args = list(meanlog = mu_est, sdlog = sigma_est), 
+#                 color = "orangered", size = 1) +
+#   scale_x_continuous(limits = c(0,2000000)) +
+#   theme_bw() +
+#   labs(y = "Densidad", x = "Cuantía ajustada (en pesos)")
 ```
-
-Se puede ver que la distribución Log-Normal estaría siendo adecuada para las cuantías individuales. 
-
-
 
 ## Propuesta 2
 
 -   Distribución de los siniestros: Binomial negativa
 
-Se plantea el mismo supuesto, respecto a la variancia y la media, que se postuló en la propuesta1
+Se plantea el mismo supuesto, respecto a la variancia y la media, que se postuló en la propuesta 1
 
 -   Distribución de la cuantías: Gamma 
 
@@ -424,27 +420,25 @@ $$
 
 
 ```{r}
-#| fig-cap: "Distribución de las cuantías individuales ajustadas"
-#| label: fig-seg5
-
+# #| fig-cap: "Distribución de las cuantías individuales ajustadas"
+# #| label: fig-seg5
+# 
 alpha = (media_datos^2)/(var_datos)
 beta = var_datos/media_datos
-
-datos |> 
-  ggplot() +
-  aes(x = Cuantia_ajust) +
-  geom_histogram(aes(y = after_stat(density)), bins = 80, fill = "grey21") +
-  stat_function(fun = dgamma, args = list(shape = alpha, scale = beta), 
-                color = "springgreen3", size = 1) +
-    # stat_function(fun = dlnorm, args = list(meanlog = mu_est, sdlog = sigma_est), 
-    #             color = "orangered", size = 1) +
-  scale_x_continuous(limits = c(0,2000000)) +
-  theme_bw() +
-  labs(y = "Densidad", x = "Cuantía ajustada (en pesos)")
+# 
+# datos |> 
+#   ggplot() +
+#   aes(x = Cuantia_ajust) +
+#   geom_histogram(aes(y = after_stat(density)), bins = 80, fill = "grey21") +
+#   stat_function(fun = dgamma, args = list(shape = alpha, scale = beta), 
+#                 color = "springgreen3", size = 1) +
+#     # stat_function(fun = dlnorm, args = list(meanlog = mu_est, sdlog = sigma_est), 
+#     #             color = "orangered", size = 1) +
+#   scale_x_continuous(limits = c(0,2000000)) +
+#   theme_bw() +
+#   labs(y = "Densidad", x = "Cuantía ajustada (en pesos)")
 ```
 
-
-Al igual que la Log-Normal, la distribución Gamma parecería que se adecua a los datos de las cuantías individuales; con la salvedad de que presenta menor densidad que la Log-Normal en valores chicos de cuantías.
 
 ## Propuesta 3
 
@@ -543,9 +537,30 @@ mu_est <- log(mom1) - (1/2)*log(r)
 ```
 
 
-Al ser los mismos parámetros estimados, el ajuste de la distribución Log-Normal será el mismo que para el caso donde el número de siniestros sigue la Binomial Negativa, como se muestra en la @fig-seg4.
+Al ser los mismos parámetros estimados, el ajuste de la distribución Log-Normal será el mismo que para el caso donde el número de siniestros sigue la Binomial Negativa.
 
-En las 3 propuestas se utilizan distintas distribuciones para modelar las cuantías individuales, se puede ver una mejor comparación del ajuste de las mismas en la @fig-seg-anexo1.
+```{r}
+#| fig-cap: "Comparación del ajuste de las distribuciones propuestas"
+#| label: fig-seg-re2
+
+datos |> 
+  ggplot() +
+  aes(x = Cuantia_ajust) +
+  geom_histogram(aes(y = after_stat(density)), bins = 50, fill = "grey21") +
+  geom_function(fun = dgamma, args = list(shape = alpha, scale = beta), 
+                aes(color = "Gamma"), show.legend = T, size = 1) +
+  geom_function(fun = dlnorm, args = list(meanlog = mu_est, sdlog = sigma_est), 
+              aes(color = "Log-Normal"), show.legend = T, size = 1) +
+  scale_color_manual(name = "Distribución", values = c("springgreen3", "orangered")) +
+  scale_x_continuous(limits = c(0,2000000)) +
+  labs(y = "Densidad", x = "Cuantía ajustada (en pesos)") +
+  theme_bw() + 
+  theme(legend.position = "top")
+```
+
+En las 3 propuestas mencionadas anteriormente, se usó distribuciones asimétricas que modelan datos no negativos para la cuantía siniestral individual, por lo que, en la @fig-seg-re2 se puede observar qué, tanto la distribución "Gamma" como la "Log-Normal" se ajustan bien a los datos, con la salvedad de que la distribución "Gamma" presenta menor densidad que la "Log-Normal" en valores chicos de cuantías.
+
+\newpage
 
 ## Resultados
 
@@ -818,23 +833,6 @@ Por último, en caso de elegir una propuesta para esta situación, si bien no ha
 
 Todo lo realizado en el trabajo se encuentra en el siguiente repositorio el cuál se accede haciendo [click aquí](https://github.com/Franco-Santini/tp_seguros).
 
-```{r}
-#| fig-cap: "Comparación del ajuste de las distribuciones propuestas"
-#| label: fig-seg-anexo1
 
-datos |> 
-  ggplot() +
-  aes(x = Cuantia_ajust) +
-  geom_histogram(aes(y = after_stat(density)), bins = 50, fill = "grey21") +
-  geom_function(fun = dgamma, args = list(shape = alpha, scale = beta), 
-                aes(color = "Gamma"), show.legend = T, size = 1) +
-  geom_function(fun = dlnorm, args = list(meanlog = mu_est, sdlog = sigma_est), 
-              aes(color = "Log-Normal"), show.legend = T, size = 1) +
-  scale_color_manual(name = "Distribución", values = c("springgreen3", "orangered")) +
-  scale_x_continuous(limits = c(0,2000000)) +
-  labs(y = "Densidad", x = "Cuantía ajustada (en pesos)") +
-  theme_bw() + 
-  theme(legend.position = "top")
-```
 
 
