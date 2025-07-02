@@ -810,7 +810,7 @@ rbind(prop1, prop2, prop3) |>
 
 En la @tbl-seg5 se puede observar que, el mayor MSM se obtiene usando la propuesta "BN+Gamma" asumiendo una distribución Normal Power y con un porcentaje de recargo de seguridad del 1%, en consecuencia, el menor MSM se obtiene usando la propuesta "Poisson+LogNormal" asumiendo una distribución Normal Power y con un porcentaje de recargo de seguridad del 5%.
 
-Por último, en caso de elegir una propuesta para esta situación, si bien no hay una propuesta que sea la más adecuada, se optaría por la "BN+Gamma" con un porcentaje de recargo de seguridad del 2% y bajo el supuesto de que las cuantía totales se distribuyen como una Normal Power.
+Por último, en caso de elegir una propuesta para esta situación, si bien no hay una propuesta que sea la más adecuada, se optaría por la "BN+Gamma" con un porcentaje de recargo de seguridad del 2% y bajo el supuesto de que las cuantía totales se distribuyen como una Normal Power. Además, si se cobraran las primas recargadas (por un valor de `r round(prop2$PR[2], 2)` millones de pesos) se garantizaría la solvencia en caso de que en este año se repitan las cuantías siniestrales totales del año 2023, ya que éstas fueron de `r round(cuantia_total/1000000, 2)` millones de pesos.
 
 \newpage
 
